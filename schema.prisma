@@ -1,0 +1,872 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model AkunPengeluaran {
+  id                   Int @id @default(autoincrement())
+  nm_akun              String
+  harga_gudang         Int
+  jenis_pengeluaran    Int
+  jumlah_pengeluaran   Float
+  jenis_akun_id        Int
+  created_at           DateTime? 
+  updated_at           DateTime? 
+
+  pengeluaran          Pengeluaran[]
+  @@map("akun_pengeluaran")
+}
+
+model Bahan {
+  id                   Int @id @default(autoincrement())
+  satuan_id            Int
+  jenis_bahan_id       Int
+  bahan                String
+  aktif                String
+  harga                Int
+  harga_beli           Int
+  stok_baku_gudang     Int
+  possition            Int
+  created_at           DateTime? 
+  updated_at           DateTime? 
+
+  satuan               Satuan? @relation(fields: [satuan_id], references: [id])
+  hargaBahan           HargaBahan[]
+  jurnal               Jurnal[]
+  resep                Resep[]
+  stok                 Stok[]
+  stokGudang           StokGudang[]
+  @@map("bahan")
+}
+
+model BarangKebutuhan {
+  id                   Int @id @default(autoincrement())
+  satuan_id            Int
+  nm_barang            String
+  harga                Int
+  harga_beli           Int
+  stok_baku_gudang     Int
+  aktif                Int
+  possition            Int
+  created_at           DateTime? 
+  updated_at           DateTime? 
+
+  satuan               Satuan? @relation(fields: [satuan_id], references: [id])
+  hargaKebutuhan       HargaKebutuhan[]
+  kebutuhan            Kebutuhan[]
+  @@map("barang_kebutuhan")
+}
+
+model BukaToko {
+  id                   BigInt @id @default(autoincrement())
+  kode                 String? 
+  kota_id              Int? 
+  cabang_id            Int
+  tgl                  DateTime
+  nm_karyawan          String? 
+  buka                 DateTime? 
+  tutup                DateTime? 
+  ket_kebutuhan        String? 
+  luar_buka            String? 
+  dalam_buka           String? 
+  belakang_buka        String? 
+  luar_tutup           String? 
+  dalam_tutup          String? 
+  belakang_tutup       String? 
+  created_at           DateTime? 
+  updated_at           DateTime? 
+
+  cabang               Cabang? @relation(fields: [cabang_id], references: [id])
+  jagaOutlet           JagaOutlet[]
+  jurnal               Jurnal[]
+  kebutuhan            Kebutuhan[]
+  penjualanGaji        PenjualanGaji[]
+  penjualanGajiOffice  PenjualanGajiOffice[]
+  @@map("buka_toko")
+}
+
+model Cabang {
+  id                   Int @id @default(autoincrement())
+  kota_id              Int
+  nama                 String
+  alamat               String? 
+  map                  String? 
+  foto                 String? 
+  no_tlpn              String? 
+  email_grab           String? 
+  email_shopee         String? 
+  email_gojek          String? 
+  event                Int? 
+  possition            Int
+  time_zone            String? 
+  off                  Int
+  persen_gaji          Float? 
+  created_at           DateTime? 
+  updated_at           DateTime? 
+
+  bukaToko             BukaToko[]
+  diskonCabang         DiskonCabang[]
+  hargaPengeluaran     HargaPengeluaran[]
+  invoice              Invoice[]
+  invoiceKasir         InvoiceKasir[]
+  jagaOutlet           JagaOutlet[]
+  jurnal               Jurnal[]
+  karyawanOfficeKota   KaryawanOfficeKota[]
+  pengeluaran          Pengeluaran[]
+  pengeluaranJurnal    PengeluaranJurnal[]
+  penjualanGaji        PenjualanGaji[]
+  penjualanGajiOffice  PenjualanGajiOffice[]
+  penjualanKaryawan    PenjualanKaryawan[]
+  penjualanKasir       PenjualanKasir[]
+  persenPengeluaran    PersenPengeluaran[]
+  stok                 Stok[]
+  usersKasir           UsersKasir[]
+  @@map("cabang")
+}
+
+model Costumer {
+  id                   Int @id @default(autoincrement())
+  no_tlp               String
+  nama                 String
+  alamat               String
+  kode                 String? 
+  latitude             String? 
+  longitude            String? 
+  created_at           DateTime? 
+  updated_at           DateTime? 
+
+  invoice              Invoice[]
+  penjualan            Penjualan[]
+  @@map("costumer")
+}
+
+model Delivery {
+  id                   Int @id @default(autoincrement())
+  delivery             String
+  event                Int? 
+  created_at           DateTime? 
+  updated_at           DateTime? 
+
+  harga                Harga[]
+  invoiceKasir         InvoiceKasir[]
+  penjualanKasir       PenjualanKasir[]
+  stok                 Stok[]
+  @@map("delivery")
+}
+
+model Diskon {
+  id                   Int @id @default(autoincrement())
+  nm_diskon            String
+  jenis                Int
+  jml_diskon           Int
+  jam1                 DateTime
+  jam2                 DateTime
+  off                  Int
+  created_at           DateTime? 
+  updated_at           DateTime? 
+
+  diskonCabang         DiskonCabang[]
+  @@map("diskon")
+}
+
+model DiskonCabang {
+  id                   Int @id @default(autoincrement())
+  diskon_id            Int
+  cabang_id            Int
+  created_at           DateTime? 
+  updated_at           DateTime? 
+
+  diskon               Diskon? @relation(fields: [diskon_id], references: [id])
+  cabang               Cabang? @relation(fields: [cabang_id], references: [id])
+  @@map("diskon_cabang")
+}
+
+model GiveAway {
+  id                   Int @id @default(autoincrement())
+  kode                 String
+  tgl                  DateTime
+  nm_customer          String
+  ket                  String? 
+  tgl_exp              DateTime
+  tgl_digunakan        DateTime? 
+  invoice_id           Int? 
+  penjualan_id         Int? 
+  produk_id            Int? 
+  void                 Int
+  user_id              Int
+  created_at           DateTime? 
+  updated_at           DateTime? 
+
+  invoice              Invoice? @relation(fields: [invoice_id], references: [id])
+  penjualan            Penjualan? @relation(fields: [penjualan_id], references: [id])
+  produk               Produk? @relation(fields: [produk_id], references: [id])
+  user                 UsersKasir? @relation(fields: [user_id], references: [id])
+  @@map("give_away")
+}
+
+model Harga {
+  id                   Int @id @default(autoincrement())
+  produk_id            Int
+  delivery_id          Int
+  harga                Float
+  created_at           DateTime? 
+  updated_at           DateTime? 
+
+  produk               Produk? @relation(fields: [produk_id], references: [id])
+  delivery             Delivery? @relation(fields: [delivery_id], references: [id])
+  @@map("harga")
+}
+
+model HargaBahan {
+  id                   Int @id @default(autoincrement())
+  kota_id              Int
+  bahan_id             Int
+  harga                Float
+  stok_baku            Int
+  created_at           DateTime? 
+  updated_at           DateTime? 
+
+  bahan                Bahan? @relation(fields: [bahan_id], references: [id])
+  @@map("harga_bahan")
+}
+
+model HargaKebutuhan {
+  id                   Int @id @default(autoincrement())
+  barang_kebutuhan_id  Int
+  kota_id              Int
+  harga                Int
+  stok_baku            Int
+  created_at           DateTime? 
+  updated_at           DateTime? 
+
+  barangKebutuhan      BarangKebutuhan? @relation(fields: [barang_kebutuhan_id], references: [id])
+  @@map("harga_kebutuhan")
+}
+
+model HargaPengeluaran {
+  id                   Int @id @default(autoincrement())
+  akun_id              Int
+  cabang_id            Int
+  harga                Int
+  created_at           DateTime? 
+  updated_at           DateTime? 
+
+  cabang               Cabang? @relation(fields: [cabang_id], references: [id])
+  @@map("harga_pengeluaran")
+}
+
+model HargaVarian {
+  id                   Int @id @default(autoincrement())
+  varian_id            BigInt
+  kota_id              Int
+  harga                Int
+  stok_baku            Int
+  created_at           DateTime? 
+  updated_at           DateTime? 
+
+  varian               Varian? @relation(fields: [varian_id], references: [id])
+  @@map("harga_varian")
+}
+
+model Invoice {
+  id                   Int @id @default(autoincrement())
+  no_invoice           String
+  costumer_id          Int
+  total                Float
+  dibayar              Float
+  diskon               Float
+  no_tlp               String? 
+  alamat               String
+  status               String
+  void                 Int
+  admin                Int
+  tgl                  DateTime
+  latitude             String? 
+  longitude            String? 
+  cabang_id            Int
+  created_at           DateTime? 
+  updated_at           DateTime? 
+
+  costumer             Costumer? @relation(fields: [costumer_id], references: [id])
+  cabang               Cabang? @relation(fields: [cabang_id], references: [id])
+  giveAway             GiveAway[]
+  penjualanGaji        PenjualanGaji[]
+  penjualanGajiOffice  PenjualanGajiOffice[]
+  stokGudang           StokGudang[]
+  @@map("invoice")
+}
+
+model InvoiceKasir {
+  id                   Int @id @default(autoincrement())
+  no_invoice           String
+  kode                 String? 
+  urutan               Int
+  nm_costumer          String? 
+  nm_kasir             String? 
+  total                Float
+  dibayar              Float
+  diskon               Float
+  no_tlp               String? 
+  void                 Int
+  ket_void             String? 
+  admin                Int
+  user_void            Int? 
+  tgl                  DateTime
+  delivery_id          Int
+  pembayaran_id        BigInt
+  cabang_id            Int
+  kota_id              Int? 
+  print                Int
+  online               Int
+  created_at           DateTime? 
+  updated_at           DateTime? 
+
+  delivery             Delivery? @relation(fields: [delivery_id], references: [id])
+  pembayaran           Pembayaran? @relation(fields: [pembayaran_id], references: [id])
+  cabang               Cabang? @relation(fields: [cabang_id], references: [id])
+  @@map("invoice_kasir")
+}
+
+model JagaOutlet {
+  id                   Int @id @default(autoincrement())
+  buka_toko_id         BigInt
+  kota_id              Int? 
+  cabang_id            Int
+  karyawan_id          Int
+  role                 Int
+  tgl                  DateTime
+  ganti                Int
+  foto                 String? 
+  created_at           DateTime? 
+  updated_at           DateTime? 
+
+  bukaToko             BukaToko? @relation(fields: [buka_toko_id], references: [id])
+  cabang               Cabang? @relation(fields: [cabang_id], references: [id])
+  karyawan             Karyawan? @relation(fields: [karyawan_id], references: [id])
+  @@map("jaga_outlet")
+}
+
+model JenisListAudit {
+  id                   Int @id @default(autoincrement())
+  nm_jenis             String
+  created_at           DateTime? 
+  updated_at           DateTime? 
+
+  listAudit            ListAudit[]
+  @@map("jenis_list_audit")
+}
+
+model Jurnal {
+  id                   Int @id @default(autoincrement())
+  kd_gabungan          String
+  buka_toko_id         BigInt
+  transaksi_id         Int
+  kota_id              Int
+  cabang_id            Int
+  buku_id              Int
+  akun_id              Int
+  bahan_id             Int
+  barang_id            Int
+  varian_id            BigInt
+  debit                Float
+  kredit               Float
+  qty_debit            Float
+  qty_kredit           Float
+  user_id              Int
+  tgl                  DateTime
+  ket                  String? 
+  void                 Int
+  p_opname             Int
+  created_at           DateTime? 
+  updated_at           DateTime? 
+
+  bukaToko             BukaToko? @relation(fields: [buka_toko_id], references: [id])
+  cabang               Cabang? @relation(fields: [cabang_id], references: [id])
+  bahan                Bahan? @relation(fields: [bahan_id], references: [id])
+  varian               Varian? @relation(fields: [varian_id], references: [id])
+  user                 UsersKasir? @relation(fields: [user_id], references: [id])
+  @@map("jurnal")
+}
+
+model Karyawan {
+  id                   Int @id @default(autoincrement())
+  nama                 String
+  no_tlp               String? 
+  alamat               String? 
+  tgl_masuk            DateTime? 
+  kota_id              Int? 
+  aktif                Int
+  gapok                Int? 
+  status               String
+  possition            Int? 
+  created_at           DateTime? 
+  updated_at           DateTime? 
+
+  jagaOutlet           JagaOutlet[]
+  karyawanOfficeKota   KaryawanOfficeKota[]
+  pengeluaranJurnal    PengeluaranJurnal[]
+  penjualanGaji        PenjualanGaji[]
+  penjualanGajiOffice  PenjualanGajiOffice[]
+  penjualanKaryawan    PenjualanKaryawan[]
+  @@map("karyawan")
+}
+
+model KaryawanOffice {
+  id                   Int @id @default(autoincrement())
+  nama                 String
+  no_tlp               String? 
+  alamat               String? 
+  tgl_masuk            DateTime? 
+  gapok                Int
+  persen               Float
+  aktif                Int
+  possition            Int? 
+  created_at           DateTime? 
+  updated_at           DateTime? 
+
+  @@map("karyawan_office")
+}
+
+model KaryawanOfficeKota {
+  id                   Int @id @default(autoincrement())
+  cabang_id            Int
+  karyawan_id          Int
+  created_at           DateTime? 
+  updated_at           DateTime? 
+
+  cabang               Cabang? @relation(fields: [cabang_id], references: [id])
+  karyawan             Karyawan? @relation(fields: [karyawan_id], references: [id])
+  @@map("karyawan_office_kota")
+}
+
+model Kategori {
+  id                   Int @id @default(autoincrement())
+  kategori             String
+  possition            Int
+  created_at           DateTime? 
+  updated_at           DateTime? 
+
+  produk               Produk[]
+  @@map("kategori")
+}
+
+model KategoriVarian {
+  id                   BigInt @id @default(autoincrement())
+  kategori_varian      String
+  aktif                Int
+  created_at           DateTime? 
+  updated_at           DateTime? 
+
+  varian               Varian[]
+  @@map("kategori_varian")
+}
+
+model Kebutuhan {
+  id                   Int @id @default(autoincrement())
+  buka_toko_id         BigInt
+  barang_kebutuhan_id  Int
+  qty                  Int
+  created_at           DateTime? 
+  updated_at           DateTime? 
+
+  bukaToko             BukaToko? @relation(fields: [buka_toko_id], references: [id])
+  barangKebutuhan      BarangKebutuhan? @relation(fields: [barang_kebutuhan_id], references: [id])
+  @@map("kebutuhan")
+}
+
+model Komisi {
+  id                   BigInt @id @default(autoincrement())
+  nama                 String
+  jenis                String
+  type                 String
+  jumlah               Float
+  cek                  String
+  created_at           DateTime? 
+  updated_at           DateTime? 
+
+  @@map("komisi")
+}
+
+model ListAudit {
+  id                   Int @id @default(autoincrement())
+  jenis_id             Int
+  nm_audit             String
+  aktif                Int
+  created_at           DateTime? 
+  updated_at           DateTime? 
+
+  jenis                JenisListAudit? @relation(fields: [jenis_id], references: [id])
+  @@map("list_audit")
+}
+
+model Pembayaran {
+  id                   BigInt @id @default(autoincrement())
+  pembayaran           String
+  aktif                String
+  created_at           DateTime? 
+  updated_at           DateTime? 
+
+  invoiceKasir         InvoiceKasir[]
+  penjualanKasir       PenjualanKasir[]
+  @@map("pembayaran")
+}
+
+model Pengeluaran {
+  id                   Int @id @default(autoincrement())
+  akun_pengeluaran_id  Int
+  harga                Int
+  qty                  Float
+  cabang_id            Int
+  tgl                  DateTime
+  user_id              Int
+  created_at           DateTime? 
+  updated_at           DateTime? 
+
+  akunPengeluaran      AkunPengeluaran? @relation(fields: [akun_pengeluaran_id], references: [id])
+  cabang               Cabang? @relation(fields: [cabang_id], references: [id])
+  user                 UsersKasir? @relation(fields: [user_id], references: [id])
+  @@map("pengeluaran")
+}
+
+model PengeluaranJurnal {
+  id                   Int @id @default(autoincrement())
+  kd_gabungan          String? 
+  kota_id              Int
+  cabang_id            Int
+  akun_id              Int
+  jumlah               Int
+  tgl                  DateTime
+  ket                  String? 
+  user_id              Int
+  user_hutang_id       Int? 
+  kd_jurnal            String? 
+  created_at           DateTime? 
+  updated_at           DateTime? 
+
+  cabang               Cabang? @relation(fields: [cabang_id], references: [id])
+  user                 UsersKasir? @relation(fields: [user_id], references: [id])
+  userHutang           Karyawan? @relation(fields: [user_hutang_id], references: [id])
+  @@map("pengeluaran_jurnal")
+}
+
+model Penjualan {
+  id                   Int @id @default(autoincrement())
+  no_invoice           String
+  costumer_id          Int
+  produk_id            Int
+  qty                  Int
+  harga                Float
+  diskon               Float
+  total                Float
+  total_varian         Int
+  ket                  String? 
+  void                 Int
+  admin                Int
+  tgl                  DateTime
+  created_at           DateTime? 
+  updated_at           DateTime? 
+
+  costumer             Costumer? @relation(fields: [costumer_id], references: [id])
+  produk               Produk? @relation(fields: [produk_id], references: [id])
+  giveAway             GiveAway[]
+  penjualanVarian      PenjualanVarian[]
+  penjualanVarianOnline PenjualanVarianOnline[]
+  stok                 Stok[]
+  @@map("penjualan")
+}
+
+model PenjualanGaji {
+  id                   Int @id @default(autoincrement())
+  buka_toko_id         BigInt
+  kota_id              Int? 
+  cabang_id            Int
+  invoice_id           Int
+  karyawan_id          Int
+  jumlah               Float
+  tgl                  DateTime
+  void                 Int
+  persen_gaji          Float
+  created_at           DateTime? 
+  updated_at           DateTime? 
+
+  bukaToko             BukaToko? @relation(fields: [buka_toko_id], references: [id])
+  cabang               Cabang? @relation(fields: [cabang_id], references: [id])
+  invoice              Invoice? @relation(fields: [invoice_id], references: [id])
+  karyawan             Karyawan? @relation(fields: [karyawan_id], references: [id])
+  @@map("penjualan_gaji")
+}
+
+model PenjualanGajiOffice {
+  id                   Int @id @default(autoincrement())
+  buka_toko_id         BigInt
+  kota_id              Int? 
+  cabang_id            Int
+  invoice_id           Int
+  karyawan_id          Int
+  jumlah               Float
+  tgl                  DateTime
+  void                 Int
+  persen_gaji          Float
+  created_at           DateTime? 
+  updated_at           DateTime? 
+
+  bukaToko             BukaToko? @relation(fields: [buka_toko_id], references: [id])
+  cabang               Cabang? @relation(fields: [cabang_id], references: [id])
+  invoice              Invoice? @relation(fields: [invoice_id], references: [id])
+  karyawan             Karyawan? @relation(fields: [karyawan_id], references: [id])
+  @@map("penjualan_gaji_office")
+}
+
+model PenjualanKaryawan {
+  id                   Int @id @default(autoincrement())
+  no_invoice           String
+  karyawan_id          Int
+  tgl                  DateTime
+  cabang_id            Int
+  jml_komisi           Float
+  void                 Int
+  online               Int
+  created_at           DateTime?
+  updated_at           DateTime?
+
+  karyawan             Karyawan? @relation(fields: [karyawan_id], references: [id])
+  cabang               Cabang? @relation(fields: [cabang_id], references: [id])
+  @@map("penjualan_karyawan")
+}
+
+model PenjualanKasir {
+  id                   Int @id @default(autoincrement())
+  no_invoice           String
+  nm_costumer          String? 
+  produk_id            Int
+  qty                  Int
+  harga                Float
+  harga_normal         Float
+  catatan              String? 
+  delivery_id          Int
+  pembayaran_id        BigInt
+  diskon               Float
+  total                Float
+  total_varian         Float
+  void                 Int
+  admin                Int
+  cabang_id            Int
+  kota_id              Int? 
+  tgl                  DateTime
+  online               Int
+  created_at           DateTime? 
+  updated_at           DateTime? 
+
+  produk               Produk? @relation(fields: [produk_id], references: [id])
+  delivery             Delivery? @relation(fields: [delivery_id], references: [id])
+  pembayaran           Pembayaran? @relation(fields: [pembayaran_id], references: [id])
+  cabang               Cabang? @relation(fields: [cabang_id], references: [id])
+  @@map("penjualan_kasir")
+}
+
+model PenjualanVarian {
+  id                   BigInt @id @default(autoincrement())
+  penjualan_id         Int
+  no_invoice           String
+  varian_id            BigInt
+  qty                  Int
+  harga                Float
+  tgl                  DateTime
+  created_at           DateTime? 
+  updated_at           DateTime? 
+
+  penjualan            Penjualan? @relation(fields: [penjualan_id], references: [id])
+  varian               Varian? @relation(fields: [varian_id], references: [id])
+  @@map("penjualan_varian")
+}
+
+model PenjualanVarianOnline {
+  id                   BigInt @id @default(autoincrement())
+  penjualan_id         Int
+  no_invoice           String
+  varian_id            BigInt
+  qty                  Int
+  harga                Float
+  tgl                  DateTime
+  created_at           DateTime? 
+  updated_at           DateTime? 
+
+  penjualan            Penjualan? @relation(fields: [penjualan_id], references: [id])
+  varian               Varian? @relation(fields: [varian_id], references: [id])
+  @@map("penjualan_varian_online")
+}
+
+model PersenPengeluaran {
+  id                   Int @id @default(autoincrement())
+  cabang_id            Int
+  akun_id              Int
+  jenis                Int
+  jumlah               Float
+  created_at           DateTime? 
+  updated_at           DateTime? 
+
+  cabang               Cabang? @relation(fields: [cabang_id], references: [id])
+  @@map("persen_pengeluaran")
+}
+
+model Produk {
+  id                   Int @id @default(autoincrement())
+  kategori_id          Int
+  nm_produk            String
+  foto                 String
+  diskon               Int
+  status               String
+  tampil_varian        Int
+  possition            Int
+  hapus                Int
+  tampil_voucher       Int
+  terlaris             Int
+  created_at           DateTime? 
+  updated_at           DateTime? 
+
+  kategori             Kategori? @relation(fields: [kategori_id], references: [id])
+  giveAway             GiveAway[]
+  harga                Harga[]
+  penjualan            Penjualan[]
+  penjualanKasir       PenjualanKasir[]
+  resep                Resep[]
+  stok                 Stok[]
+  @@map("produk")
+}
+
+model Resep {
+  id                   Int @id @default(autoincrement())
+  produk_id            Int
+  bahan_id             Int
+  takaran              Float
+  created_at           DateTime? 
+  updated_at           DateTime? 
+
+  produk               Produk? @relation(fields: [produk_id], references: [id])
+  bahan                Bahan? @relation(fields: [bahan_id], references: [id])
+  @@map("resep")
+}
+
+model Satuan {
+  id                   Int @id @default(autoincrement())
+  satuan               String
+  created_at           DateTime? 
+  updated_at           DateTime? 
+
+  bahan                Bahan[]
+  barangKebutuhan      BarangKebutuhan[]
+  @@map("satuan")
+}
+
+model Sop {
+  id                   Int @id @default(autoincrement())
+  sop                  String
+  created_at           DateTime? 
+  updated_at           DateTime? 
+
+  @@map("sop")
+}
+
+model Stok {
+  id                   Int @id @default(autoincrement())
+  kode                 String
+  no_invoice           String? 
+  penjualan_id         Int
+  produk_id            Int
+  kota_id              Int? 
+  cabang_id            Int
+  delivery_id          Int
+  bahan_id             Int
+  debit                Int
+  kredit               Int
+  harga                Int
+  tgl                  DateTime
+  admin                Int
+  jenis                String
+  status               String
+  created_at           DateTime? 
+  updated_at           DateTime? 
+
+  penjualan            Penjualan? @relation(fields: [penjualan_id], references: [id])
+  produk               Produk? @relation(fields: [produk_id], references: [id])
+  cabang               Cabang? @relation(fields: [cabang_id], references: [id])
+  delivery             Delivery? @relation(fields: [delivery_id], references: [id])
+  bahan                Bahan? @relation(fields: [bahan_id], references: [id])
+  @@map("stok")
+}
+
+model StokGudang {
+  id                   Int @id @default(autoincrement())
+  invoice_id           Int
+  kd_gabungan          String
+  kota_id              Int
+  mitra_id             Int
+  bahan_id             Int
+  jenis_bahan          Int
+  jenis                Int
+  qty                  Int
+  harga                Int
+  harga_normal         Int? 
+  hutang_gudang_id     Int? 
+  harga_hutang         Int? 
+  harga_bayar          Int? 
+  tgl_bayar            DateTime? 
+  jenis_bayar          Int? 
+  kas_awal             Int? 
+  tgl                  DateTime
+  user_id              Int
+  void                 Int
+  awal                 Int
+  p_opname             Int
+  created_at           DateTime? 
+  updated_at           DateTime? 
+
+  invoice              Invoice? @relation(fields: [invoice_id], references: [id])
+  bahan                Bahan? @relation(fields: [bahan_id], references: [id])
+  user                 UsersKasir? @relation(fields: [user_id], references: [id])
+  @@map("stok_gudang")
+}
+
+model UsersKasir {
+  id                   Int @id @default(autoincrement())
+  cabang_id            Int
+  name                 String
+  username             String
+  email_verified_at    DateTime? 
+  password             String
+  remember_token       String? 
+  device_key           String? 
+  time_zone            String? 
+  created_at           DateTime? 
+  updated_at           DateTime? 
+
+  cabang               Cabang? @relation(fields: [cabang_id], references: [id])
+  giveAway             GiveAway[]
+  jurnal               Jurnal[]
+  pengeluaran          Pengeluaran[]
+  pengeluaranJurnal    PengeluaranJurnal[]
+  stokGudang           StokGudang[]
+  @@map("users_kasir")
+}
+
+model Varian {
+  id                   BigInt @id @default(autoincrement())
+  nm_varian            String
+  kategori_varian_id   BigInt
+  harga                Float
+  harga_beli           Int
+  stok_baku_gudang     Int
+  created_at           DateTime? 
+  updated_at           DateTime? 
+
+  kategoriVarian       KategoriVarian? @relation(fields: [kategori_varian_id], references: [id])
+  hargaVarian          HargaVarian[]
+  jurnal               Jurnal[]
+  penjualanVarian      PenjualanVarian[]
+  penjualanVarianOnline PenjualanVarianOnline[]
+  @@map("varian")
+}
