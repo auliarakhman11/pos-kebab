@@ -27,6 +27,10 @@ Agen AI frontend wajib mematuhi panduan visual berikut menggunakan Tailwind CSS 
 *   **Query Base:** Autentikasi menggunakan tabel `users_kasir` yang berelasi dengan tabel `cabang` di mana field `cabang.off = 0`.
 *   **Simpan State:** Simpan data kasir dan token ke sisi klien.
 
+*   **Token System:** 
+    * Access Token: Kedaluwarsa dalam waktu singkat (misal: 1 jam). Digunakan untuk mengakses semua API operasional.
+    * Refresh Token: Kedaluwarsa dalam waktu panjang (misal: 7 hari). Disimpan di database users_kasir dan sisi klien (HttpOnly Cookie atau LocalStorage). Digunakan HANYA untuk meminta Access Token baru ketika yang lama kedaluwarsa tanpa harus login ulang.
+
 **B. Pengecekan Status Buka Toko (Middleware)**
 *   Cek tabel `buka_toko` berdasarkan `cabang_id` hasil login. 
 *   **Logika:** Jika ditemukan data terakhir yang field `tutup`-nya bernilai `NULL`, berarti toko masih BUKA (bisa langsung ke halaman kasir). Jika tidak ada atau sudah terisi, berarti TUTUP, dan wajib melalui halaman form "Buka Toko".

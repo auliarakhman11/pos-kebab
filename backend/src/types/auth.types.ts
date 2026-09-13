@@ -3,6 +3,10 @@ export interface LoginDto {
   password?: string;
 }
 
+export interface RefreshTokenDto {
+  refreshToken?: string;
+}
+
 export interface AuthJwtPayload {
   id: number;
   name: string;
@@ -25,4 +29,9 @@ export interface UserSessionData {
     kota_id: number;
     off: number;
   };
+}
+
+export interface LoginResponseData extends UserSessionData {
+  accessToken: string;
+  refreshToken: string;
 }

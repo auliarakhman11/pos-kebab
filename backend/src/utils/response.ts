@@ -1,5 +1,12 @@
 import { Response } from 'express';
 
+// Polyfill BigInt serialization in JSON.stringify
+if (!(BigInt.prototype as any).toJSON) {
+  (BigInt.prototype as any).toJSON = function () {
+    return Number(this);
+  };
+}
+
 /**
  * Standardized API success response
  */

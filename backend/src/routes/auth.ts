@@ -13,6 +13,20 @@ const router = Router();
 router.post('/login', authController.login);
 
 /**
+ * @route   POST /api/refresh-token
+ * @desc    Pembaruan Access Token menggunakan Refresh Token
+ * @access  Public
+ */
+router.post('/refresh-token', authController.refreshToken);
+
+/**
+ * @route   GET /api/kasir-list
+ * @desc    Ambil daftar kasir cabang aktif (cabang.off === 0) untuk dropdown login
+ * @access  Public
+ */
+router.get('/kasir-list', authController.getActiveKasirList);
+
+/**
  * @route   GET /api/me
  * @desc    Cek sesi dan profil kasir yang sedang login
  * @access  Private (JWT Required)

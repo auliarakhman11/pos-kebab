@@ -1,9 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { AuthJwtPayload } from '../types/auth.types';
-import { errorResponse } from '../utils/response';
 
-// Perluas interface Request Express agar mengenali properti kasir
 declare global {
   namespace Express {
     interface Request {
@@ -13,13 +11,18 @@ declare global {
 }
 
 /**
- * Middleware untuk memverifikasi token JWT pada protected routes
+ * Middleware untuk memvalidasi Access Token JWT.
+ * Mengembalikan code: 'TOKEN_EXPIRED' jika token kedaluwarsa agar client tahu harus me-refresh token.
  */
 export function verifyToken(req: Request, res: Response, next: NextFunction) {
   const authHeader = req.headers.authorization;
 
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return errorResponse(res, 'Akses ditolak: Token autentikasi tidak ditemukan.', 401);
+    return res.status(401).json({
+      success: false,
+      message: 'Akses ditolak: Token autentikasi tidak ditemukan.',
+      code: 'NO_TOKEN',
+    });
   }
 
   const token = authHeader.split(' ')[1];
@@ -29,7 +32,22 @@ export function verifyToken(req: Request, res: Response, next: NextFunction) {
     const decoded = jwt.verify(token, jwtSecret) as AuthJwtPayload;
     req.kasir = decoded;
     return next();
-  } catch (error) {
-    return errorResponse(res, 'Sesi telah berakhir atau token tidak valid. Silakan login kembali.', 401);
+  } catch (error: any) {
+    if (error.name === 'TokenExpiredError') {
+      return res.status(401).json({
+        success: false,
+        message: 'Akses ditolak: Sesi token telah kedaluwarsa.',
+        code: 'TOKEN_EXPIRED',
+      });
+    }
+
+    return res.status(401).json({
+      success: false,
+      message: 'Akses ditolak: Token autentikasi tidak valid.',
+      code: 'INVALID_TOKEN',
+    });
   }
 }
+
+export const authMiddleware = verifyToken;
+export default verifyToken;
