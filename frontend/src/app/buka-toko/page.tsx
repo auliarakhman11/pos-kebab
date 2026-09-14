@@ -24,9 +24,12 @@ import {
   ArrowRight,
   Search,
   ChevronDown,
+  Sun,
+  Moon,
 } from 'lucide-react';
 import api from '@/lib/api';
 import useAuthStore from '@/store/authStore';
+import { useTheme } from '@/lib/theme';
 
 // Helper Utility: Konversi File Gambar ke Base64 String
 export const fileToBase64 = (file: File): Promise<string> => {
@@ -193,6 +196,7 @@ function SearchableBahanSelect({
 export default function BukaTokoPage() {
   const router = useRouter();
   const { user, cabang, logout, initAuth } = useAuthStore();
+  const { theme, toggleTheme } = useTheme();
 
   // Status Pengecekan Toko & Loading Form Data
   const [checkingStatus, setCheckingStatus] = useState(true);
@@ -644,11 +648,11 @@ export default function BukaTokoPage() {
   // Loading Screen saat Pengecekan Status Toko
   if (checkingStatus) {
     return (
-      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6">
-        <div className="bg-white rounded-3xl p-8 border border-slate-200 shadow-xl flex flex-col items-center max-w-sm w-full text-center">
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-center p-6 transition-colors">
+        <div className="bg-white dark:bg-slate-900 rounded-3xl p-8 border border-slate-200 dark:border-slate-800 shadow-xl flex flex-col items-center max-w-sm w-full text-center">
           <div className="relative w-36 h-14 mb-4">
             <Image
-              src="/logo-yasmin.png"
+              src={theme === 'dark' ? '/logo-yasmin-dark.png' : '/logo-yasmin.png'}
               alt="Yasmin Kebab"
               fill
               className="object-contain"
@@ -656,15 +660,15 @@ export default function BukaTokoPage() {
             />
           </div>
           <Loader2 className="w-9 h-9 text-amber-500 animate-spin mb-3" />
-          <h2 className="text-base font-bold text-slate-800">Memeriksa Status Operasional...</h2>
-          <p className="text-xs text-slate-400 mt-1">Menghubungkan ke server cabang</p>
+          <h2 className="text-base font-bold text-slate-800 dark:text-slate-100">Memeriksa Status Operasional...</h2>
+          <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">Menghubungkan ke server cabang</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-800 pb-24">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 pb-24 transition-colors">
       {/* HIDDEN NATIVE CAMERA INPUTS (Khusus Kamera Hardware HP) */}
       <input
         type="file"
@@ -700,24 +704,24 @@ export default function BukaTokoPage() {
       />
 
       {/* HEADER UTAMA & TOMBOL LOGOUT */}
-      <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-xs px-4 sm:px-8 py-3">
+      <header className="sticky top-0 z-30 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 shadow-xs px-4 sm:px-8 py-3 transition-colors">
         <div className="max-w-5xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="relative w-28 h-9">
               <Image
-                src="/logo-yasmin.png"
+                src={theme === 'dark' ? '/logo-yasmin-dark.png' : '/logo-yasmin.png'}
                 alt="Yasmin Kebab"
                 fill
                 className="object-contain"
                 priority
               />
             </div>
-            <div className="h-6 w-px bg-slate-200 hidden sm:block" />
+            <div className="h-6 w-px bg-slate-200 dark:bg-slate-700 hidden sm:block" />
             <div className="flex items-center gap-2">
-              <span className="bg-rose-100 text-rose-700 text-xs font-black px-2.5 py-1 rounded-lg border border-rose-200">
+              <span className="bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-400 text-xs font-black px-2.5 py-1 rounded-lg border border-rose-200 dark:border-rose-900">
                 STATUS: TUTUP
               </span>
-              <span className="text-xs font-semibold text-slate-500 hidden sm:inline">
+              <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 hidden sm:inline">
                 Form Persiapan Operasional
               </span>
             </div>
@@ -725,19 +729,39 @@ export default function BukaTokoPage() {
 
           <div className="flex items-center gap-3">
             <div className="hidden md:flex flex-col text-right">
-              <span className="text-xs font-bold text-slate-800 flex items-center justify-end gap-1">
+              <span className="text-xs font-bold text-slate-800 dark:text-slate-100 flex items-center justify-end gap-1">
                 <Building2 className="w-3.5 h-3.5 text-amber-500" />
                 {cabang?.nama || 'Cabang Kebab Yasmin'}
               </span>
-              <span className="text-[11px] text-slate-400">
+              <span className="text-[11px] text-slate-400 dark:text-slate-500">
                 Kasir: {user?.name || user?.username || 'Petugas'}
               </span>
             </div>
 
+            {/* Tombol Toggle Theme Light / Dark */}
+            <button
+              type="button"
+              onClick={toggleTheme}
+              title={theme === 'dark' ? 'Ganti ke Light Mode' : 'Ganti ke Dark Mode'}
+              className="h-10 px-3.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-xs"
+            >
+              {theme === 'dark' ? (
+                <>
+                  <Sun className="w-4 h-4 text-amber-400" />
+                  <span className="hidden sm:inline">Light</span>
+                </>
+              ) : (
+                <>
+                  <Moon className="w-4 h-4 text-slate-600" />
+                  <span className="hidden sm:inline">Dark</span>
+                </>
+              )}
+            </button>
+
             <button
               type="button"
               onClick={handleLogout}
-              className="h-10 px-4 rounded-xl border border-slate-200 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 text-slate-600 text-xs font-bold flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer shadow-xs"
+              className="h-10 px-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-rose-50 dark:hover:bg-rose-950/40 hover:text-rose-600 dark:hover:text-rose-400 hover:border-rose-200 dark:hover:border-rose-900 text-slate-600 dark:text-slate-300 text-xs font-bold flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer shadow-xs"
             >
               <LogOut className="w-4 h-4" />
               <span>Logout</span>

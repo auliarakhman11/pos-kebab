@@ -14,6 +14,7 @@ export interface Cabang {
   alamat: string | null;
   kota_id: number;
   off: number;
+  persen_gaji?: number | null;
 }
 
 export interface AuthState {

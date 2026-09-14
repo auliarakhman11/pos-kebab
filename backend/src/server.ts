@@ -3,6 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import authRouter from './routes/auth';
 import bukaTokoRouter from './routes/bukaToko';
+import posRouter from './routes/pos';
 
 import path from 'path';
 
@@ -30,6 +31,7 @@ app.get('/api/health', (_req: Request, res: Response) => {
 // Mount Routes
 app.use('/api', authRouter);
 app.use('/api', bukaTokoRouter);
+app.use('/api', posRouter);
 
 // 404 Handler
 app.use((_req: Request, res: Response) => {

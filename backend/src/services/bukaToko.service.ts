@@ -30,15 +30,21 @@ export class BukaTokoService {
       };
     }
 
+    // Ambil data cabang untuk mendapatkan persen_gaji dan kota_id
+    const cabang = await prisma.cabang.findUnique({ where: { id: cabangId } });
+
     // Jika record TERAKHIR tutup-nya masih NULL, berarti toko sedang BUKA
     return {
       is_open: true,
       buka_toko_id: Number(latestBuka.id),
       kode: latestBuka.kode,
       tgl: latestBuka.tgl,
+      tgl_jurnal: latestBuka.tgl,
       buka: latestBuka.buka,
       cabang_id: latestBuka.cabang_id,
       nm_karyawan: latestBuka.nm_karyawan,
+      kota_id: latestBuka.kota_id || cabang?.kota_id || 0,
+      persen_gaji: cabang?.persen_gaji || 0,
     };
   }
 

@@ -23,7 +23,10 @@ export interface StatusTokoData {
   buka_toko_id?: number | null;
   kode?: string | null;
   tgl?: Date | string | null;
+  tgl_jurnal?: Date | string | null;
   buka?: Date | string | null;
   cabang_id?: number;
   nm_karyawan?: string | null;
+  kota_id?: number;
+  persen_gaji?: number;
 }
