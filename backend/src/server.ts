@@ -4,6 +4,8 @@ import dotenv from 'dotenv';
 import authRouter from './routes/auth';
 import bukaTokoRouter from './routes/bukaToko';
 
+import path from 'path';
+
 // Load environment variables
 dotenv.config();
 
@@ -14,6 +16,7 @@ const PORT = process.env.PORT || 5000;
 app.use(cors());
 app.use(express.json({ limit: '20mb' }));
 app.use(express.urlencoded({ extended: true, limit: '20mb' }));
+app.use(express.static(path.join(__dirname, '../public')));
 
 // Health check endpoint
 app.get('/api/health', (_req: Request, res: Response) => {

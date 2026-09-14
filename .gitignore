@@ -46,3 +46,9 @@ coverage/
 .turbo
 .eslintcache
 *.tsbuildinfo
+
+# Uploaded Photos (Local storage)
+backend/public/img_outlet/*
+!backend/public/img_outlet/.gitkeep
+backend/public/img_kry/*
+!backend/public/img_kry/.gitkeep

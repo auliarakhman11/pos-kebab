@@ -22,6 +22,20 @@ router.get('/status-toko', bukaTokoController.getStatusToko);
 router.get('/buka-toko/form-data', bukaTokoController.getFormData);
 
 /**
+ * @route   GET /api/karyawan
+ * @desc    Mengambil daftar karyawan aktif cabang
+ * @access  Private
+ */
+router.get('/karyawan', bukaTokoController.getKaryawanList);
+
+/**
+ * @route   POST /api/buka-toko/stok
+ * @desc    Simpan stok barang bawaan awal toko
+ * @access  Private
+ */
+router.post('/buka-toko/stok', bukaTokoController.addStok);
+
+/**
  * @route   POST /api/buka-toko
  * @desc    Eksekusi form buka toko (buka_toko, jaga_outlet, stok) secara atomik
  * @access  Private
