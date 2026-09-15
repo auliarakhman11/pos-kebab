@@ -26,10 +26,15 @@ import {
   ChevronDown,
   Sun,
   Moon,
+  Printer,
 } from 'lucide-react';
 import api from '@/lib/api';
 import useAuthStore from '@/store/authStore';
 import { useTheme } from '@/lib/theme';
+import {
+  printLaporanEodBluetooth,
+  LaporanEodDataForPrint,
+} from '@/utils/printBluetooth';
 
 // Helper Utility: Konversi File Gambar ke Base64 String
 export const fileToBase64 = (file: File): Promise<string> => {
@@ -282,6 +287,88 @@ export default function BukaTokoPage() {
     subtitle: string;
     step?: string;
   } | null>(null);
+  const [isPrintingPrev, setIsPrintingPrev] = useState(false);
+
+  // Cetak Laporan Tutup Toko Sebelumnya via Bluetooth
+  const handlePrintPrevEod = async () => {
+    setIsPrintingPrev(true);
+    setErrorMsg(null);
+    setSuccessMsg(null);
+    try {
+      const token = Cookies.get('pos_access_token');
+      const res = await api.get('/rekap-toko/sebelumnya', {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+
+      if (!res.data?.success || !res.data.data) {
+        throw new Error(
+          res.data?.message || 'Data laporan tutup toko sebelumnya tidak ditemukan.'
+        );
+      }
+
+      const d = res.data.data;
+      const nowStr = new Date().toLocaleTimeString('id-ID', { hour12: false });
+      const eodPayload: LaporanEodDataForPrint = {
+        cabang_nama: d.info_toko?.cabang_nama || cabang?.nama || 'Cabang Kebab Yasmin',
+        kode_sesi: d.info_toko?.kode || 'EOD',
+        waktu_buka: d.info_toko?.buka
+          ? new Date(d.info_toko.buka).toLocaleTimeString('id-ID')
+          : '-',
+        waktu_tutup: d.info_toko?.tutup
+          ? new Date(d.info_toko.tutup).toLocaleTimeString('id-ID')
+          : nowStr,
+        kasir_nama: d.info_toko?.nm_karyawan || 'Kasir',
+        laporan_penjualan: (d.laporan_penjualan || []).map((lp: any) => ({
+          delivery_nama: lp.delivery_nama,
+          pembayaran_nama: lp.pembayaran_nama,
+          total_transaksi: lp.total_transaksi,
+          total_penjualan: lp.total_penjualan,
+        })),
+        detail_produk_terjual: (d.detail_produk_terjual || []).map((dp: any) => ({
+          nm_produk: dp.nm_produk,
+          delivery_nama: dp.delivery_nama,
+          qty_terjual: dp.qty_terjual,
+          total_uang: dp.total_uang,
+        })),
+        laporan_pengeluaran: {
+          total_pengeluaran: d.laporan_pengeluaran?.total_pengeluaran || 0,
+          items: (d.laporan_pengeluaran?.items || []).map((it: any) => ({
+            nm_barang: it.nm_barang,
+            qty: it.qty,
+            total_harga: it.total_harga,
+          })),
+        },
+        laporan_kas_bersih: {
+          total_penjualan_cash: d.laporan_kas_bersih?.total_penjualan_cash || 0,
+          total_pengeluaran_kebutuhan: d.laporan_kas_bersih?.total_pengeluaran_kebutuhan || 0,
+          kas_bersih: d.laporan_kas_bersih?.kas_bersih || 0,
+        },
+        laporan_barang_bawaan: (d.laporan_barang_bawaan || []).map((st: any) => ({
+          nm_bahan: st.nm_bahan,
+          satuan: st.satuan,
+          masuk: st.masuk,
+          keluar: st.keluar,
+          refund: st.refund,
+          sisa_fisik: st.sisa_fisik,
+        })),
+        ket_kebutuhan: d.info_toko?.ket_kebutuhan || undefined,
+      };
+
+      await printLaporanEodBluetooth(eodPayload);
+      setSuccessMsg(
+        'Laporan Tutup Toko Sebelumnya berhasil dicetak ke printer thermal Bluetooth!'
+      );
+    } catch (err: any) {
+      console.error('Print prev EOD error:', err);
+      setErrorMsg(
+        err.response?.data?.message ||
+          err.message ||
+          'Gagal mencetak laporan tutup toko sebelumnya.'
+      );
+    } finally {
+      setIsPrintingPrev(false);
+    }
+  };
 
   // CEK STATUS TOKO SAAT PERTAMA KALI HALAMAN DIMUAT
   useEffect(() => {
@@ -840,12 +927,34 @@ export default function BukaTokoPage() {
             <p className="text-amber-100 text-xs sm:text-sm mt-1 max-w-2xl leading-relaxed">
               Lengkapi stok barang bawaan awal, pilih petugas shift beserta foto selfie (kamera depan), dan foto 3 sudut outlet menggunakan kamera belakang sebelum membuka kasir.
             </p>
-            {kodeBukaToko && (
-              <div className="mt-4 inline-flex items-center gap-2 bg-black/20 border border-white/20 px-3 py-1.5 rounded-xl text-xs font-mono">
-                <span className="text-amber-200">Kode Sesi:</span>
-                <span className="font-bold tracking-wider">{kodeBukaToko}</span>
-              </div>
-            )}
+            <div className="mt-4 flex flex-wrap items-center gap-2.5">
+              {kodeBukaToko && (
+                <div className="inline-flex items-center gap-2 bg-black/25 border border-white/25 px-3.5 py-2 rounded-xl text-xs font-mono backdrop-blur-xs">
+                  <span className="text-amber-200">Kode Sesi:</span>
+                  <span className="font-bold tracking-wider text-white">{kodeBukaToko}</span>
+                </div>
+              )}
+
+              <button
+                type="button"
+                onClick={handlePrintPrevEod}
+                disabled={isPrintingPrev}
+                className="inline-flex items-center gap-2 bg-white/95 hover:bg-white text-slate-800 dark:bg-slate-900/90 dark:hover:bg-slate-900 dark:text-slate-100 border border-white/30 dark:border-slate-700 px-3.5 py-2 rounded-xl text-xs font-bold shadow-md hover:scale-105 active:scale-95 transition-all cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+                title="Cetak Laporan Tutup Toko Sebelumnya ke Printer Bluetooth"
+              >
+                {isPrintingPrev ? (
+                  <>
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin text-amber-500" />
+                    <span>Mencetak Laporan...</span>
+                  </>
+                ) : (
+                  <>
+                    <Printer className="w-3.5 h-3.5 text-amber-500" />
+                    <span>Cetak Laporan Tutup Toko Sebelumnya</span>
+                  </>
+                )}
+              </button>
+            </div>
           </div>
           <div className="absolute right-0 bottom-0 translate-x-8 translate-y-8 opacity-15 pointer-events-none">
             <Store className="w-64 h-64 text-white" />
@@ -864,10 +973,20 @@ export default function BukaTokoPage() {
         )}
 
         {successMsg && (
-          <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 px-4 py-4 rounded-2xl mb-6 flex items-center gap-3 shadow-xs animate-in fade-in duration-200">
-            <CheckCircle2 className="w-6 h-6 text-emerald-600 shrink-0" />
-            <div className="flex-1 text-sm font-bold">{successMsg}</div>
-            <Loader2 className="w-5 h-5 text-emerald-600 animate-spin" />
+          <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 px-4 py-3.5 rounded-2xl mb-6 flex items-center gap-3 shadow-xs animate-in fade-in duration-200">
+            <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+            <div className="flex-1 text-xs sm:text-sm font-bold">{successMsg}</div>
+            {isSubmitting ? (
+              <Loader2 className="w-4 h-4 text-emerald-600 animate-spin" />
+            ) : (
+              <button
+                type="button"
+                onClick={() => setSuccessMsg(null)}
+                className="text-emerald-500 hover:text-emerald-700 cursor-pointer p-1"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
           </div>
         )}
 

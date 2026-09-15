@@ -127,8 +127,24 @@ Saat "Bayar" ditekan, kirim payload ke API. Gunakan `$transaction` Prisma agar e
 **D. Tutup Toko (Laporan EOD)**
 *   **Preview Laporan Layar:** Penjualan (omset), Kebutuhan (kas bersih), Barang Bawaan (Masuk - Keluar - Refund).
 *   Input `barang_kebutuhan` (akhir) & `ket_kebutuhan`.
-*   Wajib foto *outlet* (Luar, Dalam, Belakang). Update `tutup = WAKTU_SEKARANG`, *file base64* ke `buka_toko`.
-*   Update seluruh kode di `stok` jadi `status = 'tutup'`. Cetak struk laporan fisik.
+### D. Modul 5: Tutup Toko & Laporan EOD (End of Day)
+*   **API Rekap & Laporan (`GET /api/rekap-toko/:buka_toko_id`):**
+    1. **Laporan Penjualan:** Ambil dari `invoice_kasir` (`void = 0`, `kode = buka_toko.kode`). Group by `delivery_id` dan `pembayaran_id`. Hitung COUNT transaksi dan SUM total.
+    2. **Detail Produk Terjual:** Ambil dari `penjualan_kasir`. Group by `produk_id` dan `delivery_id`. Tampilkan nama produk, jenis order, SUM qty, dan SUM total.
+    3. **Laporan Pengeluaran:** Ambil total uang dari input barang kebutuhan sebelumnya (`jurnal` dengan `buku_id = 1, akun_id = 13, void = 0`).
+    4. **Laporan Kas Bersih:** Rumus: `(Total Penjualan Cash/Tunai dari pembayaran_id = 1) - (Total Pengeluaran Kebutuhan)`.
+    5. **Laporan Barang Bawaan (Stok Fisik):** Rumus per bahan: `(Stok jenis = 'Masuk') - (Stok jenis = 'Keluar') - (Stok jenis = 'Refund')`.
+*   **API Tutup Toko (`POST /api/tutup-toko`):**
+    1. **Validasi:** Wajib 3 foto base64 (`foto_luar`, `foto_dalam`, `foto_belakang`). Jika tidak ada, kembalikan HTTP 400.
+    2. **Konversi Foto (File System):** Simpan ke folder `public/img_outlet/` di backend dengan format nama: `YYYYMMDD + cabang_id + luar_tutup.png` (serta `dalam_tutup.png`, `belakang_tutup.png`).
+    3. **Insert Kebutuhan:** Looping array `kebutuhan`, insert ke tabel `kebutuhan` (`buka_toko_id`, `barang_kebutuhan_id`, `qty`).
+    4. **Update Status Stok:** Update tabel `stok` set `status = 'tutup'` di mana `kode = kode_buka_toko`.
+    5. **Update Buka Toko:** Update tabel `buka_toko` set `tutup = WAKTU_SEKARANG` (sesuai zona waktu WIB/WITA), `ket_kebutuhan = payload.ket_kebutuhan`, dan nama file gambar.
+*   **Frontend UI & Bluetooth EOD Print (`/app/tutup-toko/page.tsx`):**
+    - Menyajikan ke-5 tabel/kartu laporan agregasi secara real-time.
+    - Form dinamis sisa barang kebutuhan dan textarea catatan.
+    - Kamera Live Viewfinder (HTML5 Canvas/getUserMedia) + fallback upload file native.
+    - Modal Berhasil Menutup Toko & Tombol Cetak Laporan EOD Bluetooth (Web Bluetooth API) menghasilkan byte-stream ESC/POS 58mm/80mm.
 
 ---
 

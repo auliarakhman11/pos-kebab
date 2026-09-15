@@ -318,10 +318,175 @@ async function sendBytesChunked(characteristic: any, bytes: Uint8Array, chunkSiz
 }
 
 /**
- * Fungsi Utama: Cetak Struk via Web Bluetooth API (navigator.bluetooth)
+ * Format data untuk Cetak Laporan EOD (Tutup Toko)
  */
-export async function printReceiptBluetooth(data: ReceiptDataForPrint): Promise<{ success: boolean; message: string }> {
-  // 1. Cek dukungan Web Bluetooth di browser
+export interface LaporanEodDataForPrint {
+  cabang_nama: string;
+  kode_sesi: string;
+  waktu_buka: string;
+  waktu_tutup: string;
+  kasir_nama: string;
+  laporan_penjualan: {
+    delivery_nama: string;
+    pembayaran_nama: string;
+    total_transaksi: number;
+    total_penjualan: number;
+  }[];
+  detail_produk_terjual: {
+    nm_produk: string;
+    delivery_nama: string;
+    qty_terjual: number;
+    total_uang: number;
+  }[];
+  laporan_pengeluaran: {
+    total_pengeluaran: number;
+    items: {
+      nm_barang: string;
+      qty: number;
+      total_harga: number;
+    }[];
+  };
+  laporan_kas_bersih: {
+    total_penjualan_cash: number;
+    total_pengeluaran_kebutuhan: number;
+    kas_bersih: number;
+  };
+  laporan_barang_bawaan: {
+    nm_bahan: string;
+    satuan: string;
+    masuk: number;
+    keluar: number;
+    refund: number;
+    sisa_fisik: number;
+  }[];
+  ket_kebutuhan?: string;
+}
+
+/**
+ * Generate Byte-array ESC/POS untuk Laporan EOD Tutup Toko (58mm / 32 Kolom)
+ */
+export function generateEscPosEodBytes(data: LaporanEodDataForPrint, width: 32 | 48 = 32): Uint8Array {
+  const b = new EscPosBuilder();
+
+  // 1. HEADER LAPORAN
+  b.alignCenter();
+  b.bold(true);
+  b.fontSize('double');
+  b.line('KEBAB YASMIN');
+  b.fontSize('normal');
+  b.line(data.cabang_nama.toUpperCase());
+  b.line('LAPORAN REKAP TUTUP TOKO (EOD)');
+  b.bold(false);
+  b.divider(width, '=');
+
+  // 2. INFO SESI
+  b.alignLeft();
+  b.twoColumns('Kode Sesi', data.kode_sesi, width);
+  b.twoColumns('Kasir Jaga', data.kasir_nama, width);
+  b.twoColumns('Jam Buka', data.waktu_buka, width);
+  b.twoColumns('Jam Tutup', data.waktu_tutup, width);
+  b.divider(width, '=');
+
+  // 3. RINGKASAN KAS BERSIH (Highlight Utama)
+  b.alignCenter();
+  b.bold(true);
+  b.line('*** RINGKASAN KAS BERSIH ***');
+  b.bold(false);
+  b.alignLeft();
+  b.twoColumns('Penjualan Tunai (Cash)', `Rp ${data.laporan_kas_bersih.total_penjualan_cash.toLocaleString('id-ID')}`, width);
+  b.twoColumns('Pengeluaran Kebutuhan', `Rp ${data.laporan_kas_bersih.total_pengeluaran_kebutuhan.toLocaleString('id-ID')}`, width);
+  b.divider(width, '-');
+  b.bold(true);
+  b.twoColumns('KAS BERSIH SHIFT', `Rp ${data.laporan_kas_bersih.kas_bersih.toLocaleString('id-ID')}`, width);
+  b.bold(false);
+  b.divider(width, '=');
+
+  // 4. REKAP PENJUALAN (Group Order & Pembayaran)
+  b.bold(true);
+  b.line('REKAP PENJUALAN KASIR');
+  b.bold(false);
+  if (data.laporan_penjualan.length === 0) {
+    b.line('(Belum ada transaksi penjualan)');
+  } else {
+    for (const item of data.laporan_penjualan) {
+      b.twoColumns(`${item.delivery_nama} - ${item.pembayaran_nama}`, `${item.total_transaksi}x`, width);
+      b.twoColumns('', `Rp ${item.total_penjualan.toLocaleString('id-ID')}`, width);
+    }
+  }
+  b.divider(width, '-');
+
+  // 5. DETAIL PRODUK TERJUAL
+  b.bold(true);
+  b.line('DETAIL PRODUK TERJUAL');
+  b.bold(false);
+  if (data.detail_produk_terjual.length === 0) {
+    b.line('(Tidak ada produk terjual)');
+  } else {
+    for (const prod of data.detail_produk_terjual) {
+      b.twoColumns(`${prod.nm_produk} [${prod.delivery_nama}]`, `${prod.qty_terjual} pcs`, width);
+      b.twoColumns('', `Rp ${prod.total_uang.toLocaleString('id-ID')}`, width);
+    }
+  }
+  b.divider(width, '-');
+
+  // 6. PENGELUARAN KEBUTUHAN
+  b.bold(true);
+  b.line('RINCIAN PENGELUARAN');
+  b.bold(false);
+  if (data.laporan_pengeluaran.items.length === 0) {
+    b.line('(Tidak ada pengeluaran kebutuhan)');
+  } else {
+    for (const keb of data.laporan_pengeluaran.items) {
+      b.twoColumns(`${keb.nm_barang} (${keb.qty} pcs)`, `Rp ${keb.total_harga.toLocaleString('id-ID')}`, width);
+    }
+  }
+  b.divider(width, '-');
+
+  // 7. STOK FISIK BARANG BAWAAN
+  b.bold(true);
+  b.line('STOK FISIK BARANG BAWAAN');
+  b.bold(false);
+  b.line('Bahan | Masuk - Kel - Ref = Sisa');
+  if (data.laporan_barang_bawaan.length === 0) {
+    b.line('(Tidak ada data stok awal)');
+  } else {
+    for (const st of data.laporan_barang_bawaan) {
+      b.line(`${st.nm_bahan} (${st.satuan})`);
+      b.twoColumns(`M:${st.masuk} K:${st.keluar} R:${st.refund}`, `Sisa: ${st.sisa_fisik}`, width);
+    }
+  }
+  b.divider(width, '=');
+
+  // 8. CATATAN KEBUTUHAN
+  if (data.ket_kebutuhan) {
+    b.bold(true);
+    b.line('CATATAN KEBUTUHAN SHIFT:');
+    b.bold(false);
+    b.line(data.ket_kebutuhan);
+    b.divider(width, '-');
+  }
+
+  // 9. KOLOM TANDA TANGAN
+  b.feed(1);
+  b.twoColumns('Kasir Jaga,', 'Supervisor,', width);
+  b.feed(3);
+  b.twoColumns('(...............)', '(...............)', width);
+  b.feed(1);
+  b.alignCenter();
+  b.line('*** TERIMA KASIH ***');
+  b.line('KEBAB YASMIN INDONESIA');
+
+  // 10. FEED & CUT
+  b.feed(4);
+  b.cut();
+
+  return b.getBytes();
+}
+
+/**
+ * Kirim raw byte array ke Bluetooth Device
+ */
+async function sendRawBytesBluetooth(rawBytes: Uint8Array): Promise<void> {
   const nav = typeof navigator !== 'undefined' ? (navigator as any) : null;
   if (!nav || !nav.bluetooth) {
     throw new Error(
@@ -329,7 +494,6 @@ export async function printReceiptBluetooth(data: ReceiptDataForPrint): Promise<
     );
   }
 
-  // 2. Tampilkan dialog pairing perangkat Bluetooth
   let device: any = null;
   try {
     device = await nav.bluetooth.requestDevice({
@@ -337,7 +501,6 @@ export async function printReceiptBluetooth(data: ReceiptDataForPrint): Promise<
       optionalServices: PRINTER_SERVICES,
     });
   } catch (filterErr: any) {
-    // Jika filter spesifik gagal atau dibatalkan, coba minta seluruh perangkat Bluetooth
     if (filterErr.name === 'NotFoundError') {
       throw new Error('Pencarian printer Bluetooth dibatalkan.');
     }
@@ -355,10 +518,7 @@ export async function printReceiptBluetooth(data: ReceiptDataForPrint): Promise<
     throw new Error('Perangkat printer tidak valid.');
   }
 
-  // 3. Connect ke GATT Server
   const server = await device.gatt.connect();
-
-  // 4. Cari Service dan Karakteristik Printer
   let targetCharacteristic: any = null;
 
   for (const serviceUuid of PRINTER_SERVICES) {
@@ -374,12 +534,10 @@ export async function printReceiptBluetooth(data: ReceiptDataForPrint): Promise<
       }
       if (targetCharacteristic) break;
     } catch (e) {
-      // Coba UUID service berikutnya
       continue;
     }
   }
 
-  // Jika belum ditemukan di list predefined, telusuri semua service di perangkat
   if (!targetCharacteristic) {
     try {
       const services = await server.getPrimaryServices();
@@ -403,20 +561,37 @@ export async function printReceiptBluetooth(data: ReceiptDataForPrint): Promise<
     throw new Error('Karakteristik printer untuk mencetak data tidak ditemukan pada perangkat ini.');
   }
 
-  // 5. Generate Byte-array ESC/POS
-  const rawBytes = generateEscPosReceiptBytes(data);
-
-  // 6. Kirim data cetak ke Printer secara chunked
   await sendBytesChunked(targetCharacteristic, rawBytes);
 
-  // 7. Tunggu sesaat dan putuskan koneksi BLE dengan rapi
   await new Promise((resolve) => setTimeout(resolve, 500));
   if (device.gatt.connected) {
     device.gatt.disconnect();
   }
+}
+
+/**
+ * Fungsi Utama: Cetak Struk Transaksi via Web Bluetooth API (navigator.bluetooth)
+ */
+export async function printReceiptBluetooth(data: ReceiptDataForPrint): Promise<{ success: boolean; message: string }> {
+  const rawBytes = generateEscPosReceiptBytes(data);
+  await sendRawBytesBluetooth(rawBytes);
 
   return {
     success: true,
     message: 'Struk berhasil dikirim ke printer thermal Bluetooth!',
   };
 }
+
+/**
+ * Fungsi Utama: Cetak Laporan EOD Tutup Toko via Web Bluetooth API
+ */
+export async function printLaporanEodBluetooth(data: LaporanEodDataForPrint): Promise<{ success: boolean; message: string }> {
+  const rawBytes = generateEscPosEodBytes(data);
+  await sendRawBytesBluetooth(rawBytes);
+
+  return {
+    success: true,
+    message: 'Laporan EOD berhasil dikirim ke printer thermal Bluetooth!',
+  };
+}
+

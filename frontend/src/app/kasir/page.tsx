@@ -833,6 +833,14 @@ export default function KasirPOSPage() {
               <Sparkles className="w-3.5 h-3.5 text-amber-500" />
               <span>Buka Toko</span>
             </button>
+            <button
+              type="button"
+              onClick={() => router.push('/tutup-toko')}
+              className="px-3 py-1.5 rounded-lg text-xs font-semibold text-rose-600 dark:text-rose-400 hover:text-rose-700 dark:hover:text-rose-300 transition-all flex items-center gap-1.5 hover:bg-rose-50 dark:hover:bg-rose-950/40 cursor-pointer"
+            >
+              <Store className="w-3.5 h-3.5" />
+              <span>Tutup Toko</span>
+            </button>
           </nav>
 
           {/* SISI KANAN: TOGGLE DARK MODE + TOMBOL KELUAR (+ HAMBURGER UNTUK MOBILE/TABLET) */}
@@ -938,6 +946,17 @@ export default function KasirPOSPage() {
             >
               <Sparkles className="w-3.5 h-3.5 text-amber-500" />
               <span>Buka Toko</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                router.push('/tutup-toko');
+                setMobileNavOpen(false);
+              }}
+              className="px-3 py-1.5 rounded-lg text-xs font-semibold text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40 flex items-center gap-1.5"
+            >
+              <Store className="w-3.5 h-3.5" />
+              <span>Tutup Toko</span>
             </button>
           </div>
         )}
