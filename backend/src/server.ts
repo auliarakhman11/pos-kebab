@@ -7,6 +7,7 @@ import posRouter from './routes/pos';
 import checkoutRouter from './routes/checkout';
 import operasionalRouter from './routes/operasional';
 import tutupTokoRouter from './routes/tutupToko';
+import transaksiRouter from './routes/transaksi';
 
 import path from 'path';
 
@@ -38,6 +39,7 @@ app.use('/api', posRouter);
 app.use('/api', checkoutRouter);
 app.use('/api', operasionalRouter);
 app.use('/api', tutupTokoRouter);
+app.use('/api', transaksiRouter);
 
 // 404 Handler
 app.use((_req: Request, res: Response) => {
