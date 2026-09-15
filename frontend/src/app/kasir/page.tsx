@@ -37,6 +37,7 @@ import api from '@/lib/api';
 import useAuthStore from '@/store/authStore';
 import useCartStore, { SelectedVarian } from '@/store/cartStore';
 import { useTheme } from '@/lib/theme';
+import ModalSuksesTransaksi from '@/components/ModalSuksesTransaksi';
 import {
   ProdukItem,
   KategoriItem,
@@ -99,6 +100,7 @@ export default function KasirPOSPage() {
 
   // Modal Sukses / Struk Ringkasan
   const [successTransactionPayload, setSuccessTransactionPayload] = useState<any | null>(null);
+  const [isSubmittingCheckout, setIsSubmittingCheckout] = useState<boolean>(false);
 
   // Fallback image handling
   const [brokenImages, setBrokenImages] = useState<Record<number, boolean>>({});
@@ -271,8 +273,8 @@ export default function KasirPOSPage() {
   const uangKembalian = Math.max(0, nominalUangBayar - totalBelanja);
   const isNominalKurang = nominalUangBayar < totalBelanja;
 
-  // Handler Tombol Bayar (TUGAS 5)
-  const handleProsesPembayaran = () => {
+  // Handler Tombol Bayar (MODUL 4 - API Checkout ERP & Cetak Struk)
+  const handleProsesPembayaran = async () => {
     if (cart.length === 0) {
       alert('Keranjang belanja masih kosong! Pilih produk terlebih dahulu.');
       return;
@@ -283,55 +285,69 @@ export default function KasirPOSPage() {
       return;
     }
 
-    // Kumpulkan payload lengkap sesuai instruksi TUGAS 5
-    const payload = {
-      cart: cart.map((item) => ({
-        produk_id: item.produk_id,
-        nm_produk: item.nm_produk,
-        harga: item.harga,
-        qty: item.qty,
-        catatan: item.catatan,
-        varian: item.varian,
-        subtotal:
-          (item.harga + (item.varian || []).reduce((acc, v) => acc + (v.harga || 0), 0)) *
-          item.qty,
-      })),
-      pelanggan: {
-        nama: customerName.trim() || 'Pelanggan Umum',
-        no_tlp: customerPhone.trim() || '-',
-      },
-      delivery_id: delivery_id,
-      pembayaran_id: selectedPembayaranId,
-      total_belanja: totalBelanja,
-      nominal_bayar: nominalUangBayar,
-      kembalian: uangKembalian,
-      buka_toko: {
-        kode: buka_toko_data?.kode || null,
-        buka_toko_id: buka_toko_data?.buka_toko_id || buka_toko_data?.id || null,
-        tgl_jurnal: buka_toko_data?.tgl_jurnal || buka_toko_data?.tgl || null,
-        cabang_id: buka_toko_data?.cabang_id || cabang?.id || 1,
-        persen_gaji: buka_toko_data?.persen_gaji || cabang?.persen_gaji || 0,
-        kota_id: buka_toko_data?.kota_id || cabang?.kota_id || 0,
-        nm_karyawan: buka_toko_data?.nm_karyawan || 'Kasir',
-      },
-      waktu_transaksi: new Date().toISOString(),
-    };
+    try {
+      setIsSubmittingCheckout(true);
 
-    // WAJIB: Kumpulkan payload ini ke console.log sesuai Tugas 5
-    console.log('=== [MODUL 3 POS] PAYLOAD TRANSAKSI KASIR SIAP KIRIM ===');
-    console.log(payload);
+      const payload = {
+        pelanggan: {
+          nama: customerName.trim() || '',
+          no_tlp: customerPhone.trim() || '',
+        },
+        delivery_id: delivery_id,
+        pembayaran_id: selectedPembayaranId,
+        diskon: 0,
+        nominal_bayar: nominalUangBayar,
+        kembalian: uangKembalian,
+        items: cart.map((item) => ({
+          produk_id: item.produk_id,
+          nm_produk: item.nm_produk,
+          qty: item.qty,
+          harga: item.harga,
+          harga_normal: item.harga,
+          catatan: item.catatan,
+          varian: (item.varian || []).map((v) => ({
+            id: v.id,
+            nm_varian: v.nm_varian,
+            harga: v.harga,
+          })),
+        })),
+        buka_toko: {
+          kode: buka_toko_data?.kode || null,
+          buka_toko_id: buka_toko_data?.buka_toko_id || buka_toko_data?.id || null,
+        },
+      };
 
-    // Tampilkan modal struk konfirmasi & tutup drawer mobile jika terbuka
-    setSuccessTransactionPayload(payload);
-    setIsCartDrawerOpen(false);
+      const res = await api.post('/checkout', payload);
+
+      if (res.data?.success && res.data?.data) {
+        // 1. Kosongkan keranjang di Zustand store sesuai instruksi Modul 4
+        clearCart();
+
+        // 2. Reset input form kasir
+        setCustomerName('');
+        setCustomerPhone('');
+        setPilihanBayarTipe('pas');
+        setCustomNominalInput('');
+        setIsCartDrawerOpen(false);
+
+        // 3. Tampilkan Modal Sukses Transaksi dengan data respons API
+        setSuccessTransactionPayload(res.data.data);
+      } else {
+        throw new Error(res.data?.message || 'Gagal memproses transaksi checkout.');
+      }
+    } catch (err: any) {
+      console.error('Error Checkout:', err);
+      const msg =
+        err.response?.data?.message ||
+        err.message ||
+        'Terjadi kesalahan saat memproses transaksi checkout.';
+      alert(`Checkout Gagal: ${msg}`);
+    } finally {
+      setIsSubmittingCheckout(false);
+    }
   };
 
   const handleSelesaiTransaksi = () => {
-    clearCart();
-    setCustomerName('');
-    setCustomerPhone('');
-    setPilihanBayarTipe('pas');
-    setCustomNominalInput('');
     setSuccessTransactionPayload(null);
   };
 
@@ -539,7 +555,7 @@ export default function KasirPOSPage() {
                 type="text"
                 value={customerName}
                 onChange={(e) => setCustomerName(e.target.value)}
-                placeholder="Pelanggan Umum"
+                placeholder="Isi Nama Customer"
                 className="w-full h-9 px-3 text-xs font-semibold bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400 text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500"
               />
             </div>
@@ -654,11 +670,10 @@ export default function KasirPOSPage() {
               Uang Kembalian
             </span>
             <span
-              className={`text-sm font-black ${
-                isNominalKurang
+              className={`text-sm font-black ${isNominalKurang
                   ? 'text-rose-600 dark:text-rose-400'
                   : 'text-emerald-600 dark:text-emerald-400'
-              }`}
+                }`}
             >
               {isNominalKurang
                 ? 'Uang Kurang!'
@@ -669,16 +684,24 @@ export default function KasirPOSPage() {
 
         <button
           type="button"
-          disabled={cart.length === 0 || isNominalKurang}
+          disabled={cart.length === 0 || isNominalKurang || isSubmittingCheckout}
           onClick={handleProsesPembayaran}
-          className={`w-full h-11 sm:h-12 rounded-2xl font-black text-xs sm:text-sm flex items-center justify-center gap-2 transition-all cursor-pointer shadow-md active:scale-[0.99] ${
-            cart.length === 0 || isNominalKurang
+          className={`w-full h-11 sm:h-12 rounded-2xl font-black text-xs sm:text-sm flex items-center justify-center gap-2 transition-all cursor-pointer shadow-md active:scale-[0.99] ${cart.length === 0 || isNominalKurang || isSubmittingCheckout
               ? 'bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-600 cursor-not-allowed border border-slate-300 dark:border-slate-700 shadow-none'
               : 'bg-linear-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white shadow-amber-500/25'
-          }`}
+            }`}
         >
-          <Check className="w-5 h-5" />
-          <span>PROSES BAYAR & CETAK STRUK</span>
+          {isSubmittingCheckout ? (
+            <>
+              <Loader2 className="w-5 h-5 animate-spin" />
+              <span>MEMPROSES TRANSAKSI...</span>
+            </>
+          ) : (
+            <>
+              <Check className="w-5 h-5" />
+              <span>PROSES BAYAR & CETAK STRUK</span>
+            </>
+          )}
         </button>
       </div>
     </div>
@@ -909,11 +932,10 @@ export default function KasirPOSPage() {
               <button
                 type="button"
                 onClick={() => setSelectedKategoriId(0)}
-                className={`px-3.5 sm:px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer shrink-0 ${
-                  selectedKategoriId === 0
+                className={`px-3.5 sm:px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer shrink-0 ${selectedKategoriId === 0
                     ? 'bg-amber-500 text-white shadow-md shadow-amber-500/25 scale-[1.02]'
                     : 'bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-800'
-                }`}
+                  }`}
               >
                 Semua Menu
               </button>
@@ -925,11 +947,10 @@ export default function KasirPOSPage() {
                     key={kat.id}
                     type="button"
                     onClick={() => setSelectedKategoriId(kat.id)}
-                    className={`px-3.5 sm:px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer shrink-0 ${
-                      isSelected
+                    className={`px-3.5 sm:px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer shrink-0 ${isSelected
                         ? 'bg-amber-500 text-white shadow-md shadow-amber-500/25 scale-[1.02]'
                         : 'bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-800'
-                    }`}
+                      }`}
                   >
                     {kat.kategori}
                   </button>
@@ -1173,19 +1194,17 @@ export default function KasirPOSPage() {
                                   harga: v.harga,
                                 })
                               }
-                              className={`p-2 rounded-xl text-left border text-xs font-semibold flex items-center justify-between transition-all cursor-pointer ${
-                                isSelected
+                              className={`p-2 rounded-xl text-left border text-xs font-semibold flex items-center justify-between transition-all cursor-pointer ${isSelected
                                   ? 'bg-amber-500 text-white border-amber-600 shadow-xs'
                                   : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-amber-300'
-                              }`}
+                                }`}
                             >
                               <span className="truncate mr-1">{v.nm_varian}</span>
                               <div className="flex items-center gap-1 shrink-0">
                                 {v.harga > 0 && (
                                   <span
-                                    className={`text-[10px] font-bold ${
-                                      isSelected ? 'text-amber-100' : 'text-amber-600 dark:text-amber-400'
-                                    }`}
+                                    className={`text-[10px] font-bold ${isSelected ? 'text-amber-100' : 'text-amber-600 dark:text-amber-400'
+                                      }`}
                                   >
                                     +Rp {v.harga.toLocaleString('id-ID')}
                                   </span>
@@ -1265,11 +1284,10 @@ export default function KasirPOSPage() {
                 type="button"
                 onClick={handleConfirmAddToCart}
                 disabled={activeModalProduk.tampil_varian === 1 && selectedVarians.length === 0}
-                className={`px-5 py-2.5 rounded-xl font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer ${
-                  activeModalProduk.tampil_varian === 1 && selectedVarians.length === 0
+                className={`px-5 py-2.5 rounded-xl font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer ${activeModalProduk.tampil_varian === 1 && selectedVarians.length === 0
                     ? 'bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-600 cursor-not-allowed border border-slate-300 dark:border-slate-700'
                     : 'bg-amber-500 hover:bg-amber-600 text-white shadow-md shadow-amber-500/25'
-                }`}
+                  }`}
               >
                 <ShoppingCart className="w-4 h-4" />
                 <span>Tambah ke Keranjang</span>
@@ -1280,65 +1298,13 @@ export default function KasirPOSPage() {
       )}
 
       {/* ========================================================================= */}
-      {/* 6. MODAL STRUK KONFIRMASI PEMBAYARAN (SETELAH KLIK BAYAR)                 */}
+      {/* 6. MODAL SUKSES TRANSAKSI & CETAK STRUK BLUETOOTH                         */}
       {/* ========================================================================= */}
-      {successTransactionPayload && (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4">
-          <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-md w-full border border-slate-200 dark:border-slate-800 shadow-2xl p-5 sm:p-6 space-y-4 text-slate-800 dark:text-slate-100 transition-colors">
-            <div className="text-center space-y-1">
-              <div className="w-12 h-12 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mx-auto mb-2">
-                <CheckCircle2 className="w-7 h-7" />
-              </div>
-              <h3 className="text-base font-black text-slate-800 dark:text-slate-100">
-                Transaksi Kasir Berhasil Dicatat!
-              </h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                Payload JSON siap dikirim ke API backend (telah dicetak di Console Browser).
-              </p>
-            </div>
-
-            {/* RINGKASAN STRUK */}
-            <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 space-y-2 font-mono text-xs">
-              <div className="flex justify-between">
-                <span className="text-slate-500 dark:text-slate-400">Cabang:</span>
-                <span className="font-bold text-slate-800 dark:text-slate-200">{formattedCabangName}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-500 dark:text-slate-400">Customer:</span>
-                <span className="font-bold text-slate-800 dark:text-slate-200">
-                  {successTransactionPayload.pelanggan.nama}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-500 dark:text-slate-400">Total Belanja:</span>
-                <span className="font-black text-slate-900 dark:text-white">
-                  Rp {successTransactionPayload.total_belanja.toLocaleString('id-ID')}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-500 dark:text-slate-400">Nominal Bayar:</span>
-                <span className="font-bold text-slate-800 dark:text-slate-200">
-                  Rp {successTransactionPayload.nominal_bayar.toLocaleString('id-ID')}
-                </span>
-              </div>
-              <div className="flex justify-between pt-1 border-t border-slate-200 dark:border-slate-700 text-emerald-600 dark:text-emerald-400">
-                <span className="font-bold">Kembalian:</span>
-                <span className="font-black">
-                  Rp {successTransactionPayload.kembalian.toLocaleString('id-ID')}
-                </span>
-              </div>
-            </div>
-
-            <button
-              type="button"
-              onClick={handleSelesaiTransaksi}
-              className="w-full h-11 rounded-2xl bg-amber-500 hover:bg-amber-600 text-white font-black text-xs transition-all cursor-pointer shadow-md shadow-amber-500/20"
-            >
-              SELESAI & TRANSAKSI BARU
-            </button>
-          </div>
-        </div>
-      )}
+      <ModalSuksesTransaksi
+        isOpen={!!successTransactionPayload}
+        onClose={handleSelesaiTransaksi}
+        data={successTransactionPayload}
+      />
     </div>
   );
 }

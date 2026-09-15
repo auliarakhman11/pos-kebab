@@ -67,12 +67,15 @@ export class AuthService {
     }
 
     // 5. Generate Access Token (1 jam) & Refresh Token (7 hari)
+    const effectiveTimeZone = user.time_zone || user.cabang.time_zone || 'Asia/Makassar';
+
     const jwtPayload: AuthJwtPayload = {
       id: user.id,
       name: user.name,
       username: user.username,
       cabang_id: user.cabang_id,
       cabang_nama: user.cabang.nama,
+      time_zone: effectiveTimeZone,
     };
 
     const accessToken = jwt.sign(jwtPayload, this.jwtSecret, { expiresIn: '1h' });
@@ -97,6 +100,7 @@ export class AuthService {
           name: user.name,
           username: user.username,
           cabang_id: user.cabang_id,
+          time_zone: effectiveTimeZone,
         },
         cabang: {
           id: user.cabang.id,
@@ -151,12 +155,15 @@ export class AuthService {
     }
 
     // 4. Generate Access Token baru (1 jam)
+    const effectiveTimeZone = user.time_zone || user.cabang?.time_zone || 'Asia/Makassar';
+
     const jwtPayload: AuthJwtPayload = {
       id: user.id,
       name: user.name,
       username: user.username,
       cabang_id: user.cabang_id,
       cabang_nama: user.cabang?.nama,
+      time_zone: effectiveTimeZone,
     };
 
     const newAccessToken = jwt.sign(jwtPayload, this.jwtSecret, { expiresIn: '1h' });

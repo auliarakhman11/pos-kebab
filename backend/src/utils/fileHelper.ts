@@ -30,30 +30,90 @@ export function saveBase64Image(base64Str: string | undefined | null, subFolder:
 }
 
 /**
- * Helper zona waktu sesuai controller Laravel lama
+ * Helper zona waktu presisi berdasarkan data kasir:
+ * - Asia/Jakarta: Waktu Indonesia Barat (WIB, UTC+7)
+ * - Asia/Makassar: Waktu Indonesia Tengah (WITA, UTC+8)
+ * Berlaku untuk penentuan tanggal (tgl) dan timestamp (created_at, updated_at).
  */
 export function getZonaWaktu(timeZone?: string | null) {
+  const tz = (timeZone && (timeZone.toLowerCase().includes('jakarta') || timeZone.toLowerCase().includes('wib')))
+    ? 'Asia/Jakarta'
+    : 'Asia/Makassar';
+
   const now = new Date();
-  if (timeZone === 'Asia/Jakarta') {
-    now.setHours(now.getHours() - 1);
+
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    timeZone: tz,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  });
+
+  const parts = formatter.formatToParts(now);
+  const map: Record<string, string> = {};
+  for (const part of parts) {
+    map[part.type] = part.value;
   }
 
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, '0');
-  const day = String(now.getDate()).padStart(2, '0');
+  const year = map.year;
+  const month = map.month;
+  const day = map.day;
+  let hour = map.hour === '24' ? '00' : map.hour;
+  const minute = map.minute;
+  const second = map.second;
+
   const dateStr = `${year}-${month}-${day}`;
+  const timeStr = `${hour}:${minute}:${second}`;
 
-  const hours = String(now.getHours()).padStart(2, '0');
-  const minutes = String(now.getMinutes()).padStart(2, '0');
-  const seconds = String(now.getSeconds()).padStart(2, '0');
-  const timeStr = `${hours}:${minutes}:${seconds}`;
-
+  const zonaWaktu = new Date(`${dateStr}T${timeStr}.000Z`);
   const zonaTanggal = new Date(`${dateStr}T00:00:00.000Z`);
 
   return {
-    zonaWaktu: now,
+    timeZone: tz,
+    zonaWaktu,
     zonaTanggal,
     dateStr,
     timeStr,
+    now,
   };
 }
+
+/**
+ * Format tanggal & waktu struk sesuai zona waktu kasir (Contoh: "15 Sep 2026 01:47")
+ */
+export function formatReceiptDate(d: Date = new Date(), timeZone?: string | null): string {
+  const tz = (timeZone && (timeZone.toLowerCase().includes('jakarta') || timeZone.toLowerCase().includes('wib')))
+    ? 'Asia/Jakarta'
+    : 'Asia/Makassar';
+
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    timeZone: tz,
+    year: 'numeric',
+    month: 'numeric',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  });
+
+  const parts = formatter.formatToParts(d);
+  const map: Record<string, string> = {};
+  for (const p of parts) {
+    map[p.type] = p.value;
+  }
+
+  const monthNames = [
+    'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun',
+    'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'
+  ];
+  const mIndex = Math.max(0, parseInt(map.month, 10) - 1);
+  const bln = monthNames[mIndex] || 'Jan';
+  let hour = map.hour === '24' ? '00' : map.hour;
+
+  return `${map.day} ${bln} ${map.year} ${hour}:${map.minute}`;
+}
+

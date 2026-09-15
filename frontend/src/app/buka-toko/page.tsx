@@ -77,12 +77,14 @@ function SearchableBahanSelect({
   value,
   onChange,
   bahanList,
-  placeholder = '-- Pilih Bahan Baku --',
+  placeholder = '-- Pilih Bahan Baku (Wajib) --',
+  hasError = false,
 }: {
   value: number | '';
   onChange: (id: number | '') => void;
   bahanList: BahanItem[];
   placeholder?: string;
+  hasError?: boolean;
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -114,10 +116,26 @@ function SearchableBahanSelect({
 
   return (
     <div className="relative flex-1" ref={dropdownRef}>
+      {/* Hidden input for HTML5 standard required validation */}
+      <input
+        type="text"
+        value={value ? String(value) : ''}
+        required
+        readOnly
+        tabIndex={-1}
+        className="opacity-0 absolute pointer-events-none w-0 h-0 bottom-0 left-0"
+        aria-hidden="true"
+      />
       <button
         type="button"
         onClick={() => setIsOpen((prev) => !prev)}
-        className="w-full h-11 px-3.5 text-xs font-semibold bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-amber-400 text-slate-800 flex items-center justify-between cursor-pointer transition-all hover:border-slate-300 text-left shadow-2xs"
+        className={`w-full h-11 px-3.5 text-xs font-semibold rounded-xl focus:outline-none focus:ring-2 flex items-center justify-between cursor-pointer transition-all text-left shadow-2xs ${
+          hasError
+            ? 'bg-rose-50/40 border-2 border-rose-500 focus:ring-rose-400 text-rose-900 placeholder:text-rose-400'
+            : !selectedItem
+            ? 'bg-white border border-dashed border-amber-300 hover:border-amber-400 focus:ring-amber-400 focus:border-amber-400 text-slate-800'
+            : 'bg-white border border-slate-200 hover:border-slate-300 focus:ring-amber-400 focus:border-amber-400 text-slate-800'
+        }`}
       >
         <span
           className={
@@ -135,6 +153,13 @@ function SearchableBahanSelect({
             }`}
         />
       </button>
+
+      {hasError && (
+        <p className="text-[11px] font-semibold text-rose-500 mt-1 flex items-center gap-1">
+          <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+          <span>Bahan baku wajib dipilih!</span>
+        </p>
+      )}
 
       {isOpen && (
         <div className="absolute top-full left-0 right-0 mt-1.5 z-50 bg-white border border-slate-200 rounded-2xl shadow-xl p-2.5 animate-in fade-in zoom-in-95 duration-100 min-w-[280px]">
@@ -215,6 +240,7 @@ export default function BukaTokoPage() {
   ]);
   const [stokTersimpan, setStokTersimpan] = useState(false);
   const [savingStok, setSavingStok] = useState(false);
+  const [hasAttemptedSaveStok, setHasAttemptedSaveStok] = useState(false);
 
   // 2. STATE FOTO OUTLET (3 FOTO: LUAR, DALAM, BELAKANG)
   const [fotoLuar, setFotoLuar] = useState<string>('');
@@ -356,6 +382,7 @@ export default function BukaTokoPage() {
       ...prev,
       { id: `row-${Date.now()}`, bahan_id: '', qty: '' },
     ]);
+    setStokTersimpan(false);
   };
 
   const handleRemoveBarangRow = (id: string) => {
@@ -364,6 +391,7 @@ export default function BukaTokoPage() {
       return;
     }
     setBarangRows((prev) => prev.filter((r) => r.id !== id));
+    setStokTersimpan(false);
   };
 
   const handleBarangChange = (id: string, field: 'bahan_id' | 'qty', value: any) => {
@@ -375,13 +403,24 @@ export default function BukaTokoPage() {
 
   // Handler: Simpan Stok Barang Bawaan ke Tabel Stok (POST /api/buka-toko/stok)
   const handleSimpanStok = async () => {
+    setHasAttemptedSaveStok(true);
     setErrorMsg(null);
-    const validRows = barangRows.filter(
-      (r) => r.bahan_id !== '' && Number(r.qty) > 0
-    );
 
-    if (validRows.length === 0) {
-      setErrorMsg('Pilih bahan dan masukkan jumlah bawa (qty) minimal 1 barang bawaan!');
+    // Validasi WAJIB: Setiap baris wajib memilih bahan dan mengisi qty > 0
+    if (barangRows.length === 0) {
+      setErrorMsg('Minimal harus ada 1 barang bawaan yang diisi!');
+      return;
+    }
+
+    const hasEmptyBahan = barangRows.some((r) => r.bahan_id === '');
+    if (hasEmptyBahan) {
+      setErrorMsg('Bahan baku wajib dipilih di semua baris barang bawaan!');
+      return;
+    }
+
+    const hasEmptyQty = barangRows.some((r) => !r.qty || Number(r.qty) <= 0);
+    if (hasEmptyQty) {
+      setErrorMsg('Jumlah bawa (qty) wajib diisi dengan angka minimal 1 di semua baris!');
       return;
     }
 
@@ -396,8 +435,8 @@ export default function BukaTokoPage() {
     try {
       const token = Cookies.get('pos_access_token');
       const payload = {
-        bahan_id: validRows.map((r) => Number(r.bahan_id)),
-        debit: validRows.map((r) => Number(r.qty)),
+        bahan_id: barangRows.map((r) => Number(r.bahan_id)),
+        debit: barangRows.map((r) => Number(r.qty)),
         kode: kodeBukaToko,
       };
 
@@ -408,6 +447,7 @@ export default function BukaTokoPage() {
       if (res.data?.success) {
         if (res.data.data?.kode) setKodeBukaToko(res.data.data.kode);
         setStokTersimpan(true);
+        setHasAttemptedSaveStok(false);
         setSuccessMsg('Stok barang bawaan berhasil disimpan ke sistem!');
         setTimeout(() => setSuccessMsg(null), 3000);
       } else {
@@ -548,9 +588,12 @@ export default function BukaTokoPage() {
   };
 
   // VALIDASI KELENGKAPAN SEBELUM BUKA TOKO
+  // Dinyatakan centang / lengkap HANYA JIKA kasir sudah melakukan simpan stok masuk ke database
+  // dan seluruh baris barang bawaan memiliki bahan_id dan qty valid
   const isStokValid =
-    stokTersimpan ||
-    barangRows.some((r) => r.bahan_id !== '' && Number(r.qty) > 0);
+    stokTersimpan &&
+    barangRows.length > 0 &&
+    barangRows.every((r) => r.bahan_id !== '' && Number(r.qty) > 0);
 
   const isKaryawanValid = jagaList.length > 0;
   const isFotoOutletValid = Boolean(fotoLuar && fotoDalam && fotoBelakang);
@@ -562,6 +605,21 @@ export default function BukaTokoPage() {
   const handleSubmitBukaToko = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg(null);
+
+    // Validasi ketat bahwa form stok awal terisi lengkap
+    const hasEmptyBahan = barangRows.some((r) => r.bahan_id === '');
+    const hasEmptyQty = barangRows.some((r) => !r.qty || Number(r.qty) <= 0);
+
+    if (barangRows.length === 0 || hasEmptyBahan || hasEmptyQty) {
+      setHasAttemptedSaveStok(true);
+      setErrorMsg('Semua baris barang bawaan wajib memilih bahan dan mengisi jumlah bawa (qty)!');
+      return;
+    }
+
+    if (!stokTersimpan) {
+      setErrorMsg('Harap klik "Simpan Stok Masuk" terlebih dahulu sebelum membuka toko!');
+      return;
+    }
 
     if (!isFormSiapBuka) {
       setErrorMsg('Semua inputan wajib diisi lengkap sebelum membuka toko!');
@@ -834,7 +892,7 @@ export default function BukaTokoPage() {
               <div className="text-xs">
                 <span className="font-bold block">1. Barang Bawaan</span>
                 <span className="text-[11px] opacity-80">
-                  {isStokValid ? 'Sudah Diinput / Disimpan' : 'Belum diisi'}
+                  {isStokValid ? 'Stok Masuk Tersimpan' : 'Wajib Simpan Stok'}
                 </span>
               </div>
             </div>
@@ -892,11 +950,14 @@ export default function BukaTokoPage() {
                   <PackagePlus className="w-5 h-5" />
                 </div>
                 <div>
-                  <h2 className="text-base sm:text-lg font-black text-slate-800">
-                    1. Input Barang Bawaan (Stok Awal)
+                  <h2 className="text-base sm:text-lg font-black text-slate-800 flex items-center gap-2 flex-wrap">
+                    <span>1. Input Barang Bawaan (Stok Awal)</span>
+                    <span className="text-rose-500 text-xs font-bold bg-rose-50 border border-rose-200 px-2 py-0.5 rounded-md">
+                      * Wajib Diisi
+                    </span>
                   </h2>
                   <p className="text-xs text-slate-400">
-                    Cari bahan dari database dan masukkan jumlah bawa (qty).
+                    Pilih bahan baku dan masukkan jumlah bawa (qty) untuk semua baris.
                   </p>
                 </div>
               </div>
@@ -930,62 +991,102 @@ export default function BukaTokoPage() {
               </div>
             </div>
 
+            {/* Header Kolom Form Barang Bawaan (Desktop) */}
+            <div className="hidden sm:flex items-center gap-3 px-3.5 pb-2 text-[11px] font-black uppercase tracking-wider text-slate-400">
+              <div className="w-7 text-center">No</div>
+              <div className="flex-1 flex items-center gap-1">
+                <span>Pilih Bahan Baku</span>
+                <span className="text-rose-500 font-bold">* (Wajib)</span>
+              </div>
+              <div className="w-44 flex items-center gap-1">
+                <span>Jumlah Bawa (Qty)</span>
+                <span className="text-rose-500 font-bold">* (Wajib)</span>
+              </div>
+              <div className="w-11 text-center">Aksi</div>
+            </div>
+
             <div className="space-y-3">
-              {barangRows.map((row, index) => (
-                <div
-                  key={row.id}
-                  className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 p-3.5 bg-slate-50/70 border border-slate-200 rounded-2xl transition-all hover:border-slate-300"
-                >
-                  <div className="w-7 h-7 rounded-xl bg-slate-200 text-slate-600 font-bold text-xs flex items-center justify-center shrink-0 self-start sm:self-center">
-                    {index + 1}
-                  </div>
+              {barangRows.map((row, index) => {
+                const isBahanEmpty = hasAttemptedSaveStok && row.bahan_id === '';
+                const isQtyEmpty = hasAttemptedSaveStok && (!row.qty || Number(row.qty) <= 0);
 
-                  {/* Searchable Select untuk Bahan Baku */}
-                  <SearchableBahanSelect
-                    value={row.bahan_id}
-                    onChange={(selectedId) => handleBarangChange(row.id, 'bahan_id', selectedId)}
-                    bahanList={bahanList}
-                    placeholder="-- Cari / Pilih Bahan Baku --"
-                  />
-
-                  {/* Input Qty (Jumlah Bawa) */}
-                  <div className="w-full sm:w-44">
-                    <label className="block text-[11px] font-bold text-slate-500 mb-1 sm:hidden">
-                      Jumlah Bawa (Qty)
-                    </label>
-                    <div className="relative flex items-center">
-                      <input
-                        type="number"
-                        min="1"
-                        step="any"
-                        value={row.qty}
-                        onChange={(e) =>
-                          handleBarangChange(
-                            row.id,
-                            'qty',
-                            e.target.value ? Number(e.target.value) : ''
-                          )
-                        }
-                        placeholder="Jumlah"
-                        className="w-full h-11 px-4 text-xs font-bold bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-amber-400 text-slate-800"
-                      />
-                      <span className="absolute right-3 text-[11px] font-semibold text-slate-400 pointer-events-none">
-                        Qty
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Tombol Hapus Baris */}
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveBarangRow(row.id)}
-                    className="h-11 w-11 rounded-xl bg-white hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 border border-slate-200 text-slate-400 flex items-center justify-center transition-all active:scale-90 cursor-pointer shrink-0 self-end sm:self-center"
-                    title="Hapus baris"
+                return (
+                  <div
+                    key={row.id}
+                    className={`flex flex-col sm:flex-row items-stretch sm:items-center gap-3 p-3.5 rounded-2xl transition-all border ${
+                      isBahanEmpty || isQtyEmpty
+                        ? 'bg-rose-50/40 border-rose-300 shadow-xs'
+                        : 'bg-slate-50/70 border-slate-200 hover:border-slate-300'
+                    }`}
                   >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-              ))}
+                    <div className="w-7 h-7 rounded-xl bg-slate-200 text-slate-600 font-bold text-xs flex items-center justify-center shrink-0 self-start sm:self-center">
+                      {index + 1}
+                    </div>
+
+                    {/* Searchable Select untuk Bahan Baku (Wajib) */}
+                    <div className="flex-1 min-w-0">
+                      <label className="block text-[11px] font-bold text-slate-600 mb-1 sm:hidden">
+                        Pilih Bahan Baku <span className="text-rose-500">* (Wajib)</span>
+                      </label>
+                      <SearchableBahanSelect
+                        value={row.bahan_id}
+                        onChange={(selectedId) => handleBarangChange(row.id, 'bahan_id', selectedId)}
+                        bahanList={bahanList}
+                        placeholder="-- Cari / Pilih Bahan Baku (Wajib) --"
+                        hasError={isBahanEmpty}
+                      />
+                    </div>
+
+                    {/* Input Qty (Jumlah Bawa - Wajib) */}
+                    <div className="w-full sm:w-44">
+                      <label className="block text-[11px] font-bold text-slate-600 mb-1 sm:hidden">
+                        Jumlah Bawa (Qty) <span className="text-rose-500">* (Wajib)</span>
+                      </label>
+                      <div className="relative flex items-center">
+                        <input
+                          type="number"
+                          min="1"
+                          step="any"
+                          required
+                          value={row.qty}
+                          onChange={(e) =>
+                            handleBarangChange(
+                              row.id,
+                              'qty',
+                              e.target.value ? Number(e.target.value) : ''
+                            )
+                          }
+                          placeholder="Jumlah"
+                          className={`w-full h-11 px-4 text-xs font-bold rounded-xl focus:outline-none focus:ring-2 text-slate-800 ${
+                            isQtyEmpty
+                              ? 'bg-rose-50/40 border-2 border-rose-500 focus:ring-rose-400 text-rose-900'
+                              : 'bg-white border border-slate-200 focus:ring-amber-400 focus:border-amber-400'
+                          }`}
+                        />
+                        <span className="absolute right-3 text-[11px] font-semibold text-slate-400 pointer-events-none">
+                          Qty
+                        </span>
+                      </div>
+                      {isQtyEmpty && (
+                        <p className="text-[11px] font-semibold text-rose-500 mt-1 flex items-center gap-1">
+                          <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                          <span>Qty wajib diisi (&gt; 0)!</span>
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Tombol Hapus Baris */}
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveBarangRow(row.id)}
+                      className="h-11 w-11 rounded-xl bg-white hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 border border-slate-200 text-slate-400 flex items-center justify-center transition-all active:scale-90 cursor-pointer shrink-0 self-end sm:self-center"
+                      title="Hapus baris"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                );
+              })}
             </div>
           </div>
 

@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import authRouter from './routes/auth';
 import bukaTokoRouter from './routes/bukaToko';
 import posRouter from './routes/pos';
+import checkoutRouter from './routes/checkout';
 
 import path from 'path';
 
@@ -32,6 +33,7 @@ app.get('/api/health', (_req: Request, res: Response) => {
 app.use('/api', authRouter);
 app.use('/api', bukaTokoRouter);
 app.use('/api', posRouter);
+app.use('/api', checkoutRouter);
 
 // 404 Handler
 app.use((_req: Request, res: Response) => {

@@ -103,13 +103,10 @@ export class BukaTokoService {
       });
     }
 
-    // Cek apakah ada data kode di tabel stok terakhir cabang ini yang statusnya masih 'buka'
-    // dan belum difinalisasi di tabel buka_toko
-    const lastStokBuka = await prisma.stok.findFirst({
+    // Cek record TERAKHIR di tabel stok untuk cabang ini (HANYA data terakhir saja)
+    const lastStok = await prisma.stok.findFirst({
       where: {
         cabang_id: cabangId,
-        status: 'buka',
-        jenis: 'Masuk',
       },
       orderBy: {
         id: 'desc',
@@ -119,17 +116,17 @@ export class BukaTokoService {
     let activeKode: string | null = null;
     let savedStokItems: any[] = [];
 
-    if (lastStokBuka) {
-      // Periksa apakah kode ini sudah pernah dicatat di tabel buka_toko
+    // HANYA jika data terakhir berstatus 'buka', periksa apakah belum difinalisasi di buka_toko
+    if (lastStok && lastStok.status === 'buka') {
       const existingBuka = await prisma.bukaToko.findFirst({
         where: {
-          kode: lastStokBuka.kode,
+          kode: lastStok.kode,
         },
       });
 
       // Jika belum ada di buka_toko, berarti sesi buka toko ini masih berlangsung dan stoknya sudah disimpan sebelumnya
       if (!existingBuka) {
-        activeKode = lastStokBuka.kode;
+        activeKode = lastStok.kode;
         savedStokItems = await prisma.stok.findMany({
           where: {
             kode: activeKode,
@@ -190,16 +187,19 @@ export class BukaTokoService {
     const { bahan_id, debit, kode, timeZone } = payload;
     const cabang = await prisma.cabang.findUnique({ where: { id: cabangId } });
     const kotaId = cabang?.kota_id ?? 0;
-    const { zonaWaktu } = getZonaWaktu(timeZone || cabang?.time_zone);
+
+    const userKasir = await prisma.usersKasir.findUnique({
+      where: { id: adminId },
+      select: { time_zone: true },
+    });
+    const effectiveTz = userKasir?.time_zone || timeZone || cabang?.time_zone;
+    const { zonaWaktu, dateStr } = getZonaWaktu(effectiveTz);
 
     // Pastikan kode konsisten
     let finalKode = kode;
     if (!finalKode) {
-      const now = new Date();
-      const day = String(now.getDate()).padStart(2, '0');
-      const month = String(now.getMonth() + 1).padStart(2, '0');
-      const year = String(now.getFullYear()).slice(-2);
-      const dmy = `${day}${month}${year}`;
+      const [y, m, d] = dateStr.split('-');
+      const dmy = `${d}${m}${y.slice(-2)}`;
       const randomStr = Math.random().toString(36).substring(2, 7).toUpperCase();
       finalKode = `ST${dmy}${randomStr}${cabangId}`;
     }
@@ -316,31 +316,21 @@ export class BukaTokoService {
 
     const cabang = await prisma.cabang.findUnique({ where: { id: cabangId } });
     const kotaId = cabang?.kota_id ?? 0;
-    const { zonaWaktu, dateStr } = getZonaWaktu(timeZone || cabang?.time_zone);
+
+    const userKasir = await prisma.usersKasir.findUnique({
+      where: { id: adminId },
+      select: { time_zone: true },
+    });
+    const effectiveTz = userKasir?.time_zone || timeZone || cabang?.time_zone;
+    const { zonaWaktu, zonaTanggal, dateStr } = getZonaWaktu(effectiveTz);
 
     // Kode transaksi
-    const now = new Date();
-    const day = String(now.getDate()).padStart(2, '0');
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const year = String(now.getFullYear()).slice(-2);
-    const dmy = `${day}${month}${year}`;
+    const [y, m, d] = dateStr.split('-');
+    const dmy = `${d}${m}${y.slice(-2)}`;
     const randomStr = Math.random().toString(36).substring(2, 7).toUpperCase();
     const kodeBukaToko = kode || `ST${dmy}${randomStr}${cabangId}`;
 
-    // 1. Simpan Foto Outlet ke folder public/img_outlet
-    const fileLuarName = foto_luar?.startsWith('data:')
-      ? saveBase64Image(foto_luar, 'img_outlet', `out_luar_${kodeBukaToko}_${Date.now()}.jpg`)
-      : foto_luar || null;
-
-    const fileDalamName = foto_dalam?.startsWith('data:')
-      ? saveBase64Image(foto_dalam, 'img_outlet', `out_dalam_${kodeBukaToko}_${Date.now()}.jpg`)
-      : foto_dalam || null;
-
-    const fileBelakangName = foto_belakang?.startsWith('data:')
-      ? saveBase64Image(foto_belakang, 'img_outlet', `out_belakang_${kodeBukaToko}_${Date.now()}.jpg`)
-      : foto_belakang || null;
-
-    // 2. Ambil data nama karyawan untuk field nm_karyawan di tabel buka_toko
+    // 1. Ambil data nama karyawan untuk field nm_karyawan di tabel buka_toko
     const karyawanIds = jagaArray.map((k) => Number(k.karyawan_id || k.id)).filter(Boolean);
     const karyawans = await prisma.karyawan.findMany({
       where: { id: { in: karyawanIds } },
@@ -349,44 +339,80 @@ export class BukaTokoService {
 
     const nmKaryawan = karyawans.map((k) => k.nama).join(', ') || 'Kasir';
 
-    // 3. Eksekusi Atomic Transaction
+    // 2. Eksekusi Atomic Transaction
     const result = await prisma.$transaction(async (tx) => {
-      // A. Insert ke tabel buka_toko
+      // A. Insert ke tabel buka_toko terlebih dahulu untuk mendapatkan ID unik
       const newBukaToko = await tx.bukaToko.create({
         data: {
           kode: kodeBukaToko,
           kota_id: kotaId,
           cabang_id: cabangId,
-          tgl: zonaWaktu,
+          tgl: zonaTanggal,
           buka: zonaWaktu,
           tutup: null,
           nm_karyawan: nmKaryawan,
-          luar_buka: fileLuarName,
-          dalam_buka: fileDalamName,
-          belakang_buka: fileBelakangName,
+          luar_buka: null,
+          dalam_buka: null,
+          belakang_buka: null,
           created_at: zonaWaktu,
           updated_at: zonaWaktu,
         },
       });
 
+      const bukaTokoId = newBukaToko.id;
+
+      // Simpan Foto Outlet ke folder public/img_outlet dengan format nama ringkas:
+      // luar_buka: new_luar_{id}.jpg
+      // dalam_buka: new_buka_{id}.jpg
+      // belakang_buka: new_belakang_{id}.jpg
+      const fileLuarName = foto_luar?.startsWith('data:')
+        ? saveBase64Image(foto_luar, 'img_outlet', `new_luar_${bukaTokoId}.jpg`)
+        : foto_luar || null;
+
+      const fileDalamName = foto_dalam?.startsWith('data:')
+        ? saveBase64Image(foto_dalam, 'img_outlet', `new_buka_${bukaTokoId}.jpg`)
+        : foto_dalam || null;
+
+      const fileBelakangName = foto_belakang?.startsWith('data:')
+        ? saveBase64Image(foto_belakang, 'img_outlet', `new_belakang_${bukaTokoId}.jpg`)
+        : foto_belakang || null;
+
+      // Update record buka_toko dengan nama foto yang telah disimpan
+      await tx.bukaToko.update({
+        where: { id: bukaTokoId },
+        data: {
+          luar_buka: fileLuarName,
+          dalam_buka: fileDalamName,
+          belakang_buka: fileBelakangName,
+        },
+      });
+
       // B. Insert ke tabel jaga_outlet (Role: 3 = MS / Anggota per requirement)
+      // Format foto: new_kry_{buka_toko_id}_{karyawan_id}_{random_2_karakter}.jpg
+      const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
       for (const kj of jagaArray) {
         const kId = Number(kj.karyawan_id || kj.id);
         if (!kId) continue;
 
+        // Generate 2 random characters
+        const rand2 =
+          chars.charAt(Math.floor(Math.random() * chars.length)) +
+          chars.charAt(Math.floor(Math.random() * chars.length));
+
         // Simpan foto selfie karyawan jika berbentuk base64
         let fotoSelfieName = kj.foto;
         if (kj.foto?.startsWith('data:')) {
-          fotoSelfieName = saveBase64Image(
-            kj.foto,
-            'img_kry',
-            `kry_${kId}_${kodeBukaToko}_${Date.now()}.jpg`
-          ) || kj.foto;
+          fotoSelfieName =
+            saveBase64Image(
+              kj.foto,
+              'img_kry',
+              `new_kry_${bukaTokoId}_${kId}_${rand2}.jpg`
+            ) || kj.foto;
         }
 
         await tx.jagaOutlet.create({
           data: {
-            buka_toko_id: newBukaToko.id,
+            buka_toko_id: bukaTokoId,
             kota_id: kotaId,
             cabang_id: cabangId,
             karyawan_id: kId,

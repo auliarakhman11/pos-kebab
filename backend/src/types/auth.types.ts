@@ -13,6 +13,7 @@ export interface AuthJwtPayload {
   username: string;
   cabang_id: number;
   cabang_nama?: string;
+  time_zone?: string;
 }
 
 export interface UserSessionData {
@@ -21,6 +22,7 @@ export interface UserSessionData {
     name: string;
     username: string;
     cabang_id: number;
+    time_zone?: string;
   };
   cabang: {
     id: number;

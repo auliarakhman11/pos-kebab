@@ -88,6 +88,17 @@ export class BukaTokoController {
         return errorResponse(res, 'Pilih minimal satu bahan untuk ditambahkan ke stok.', 400);
       }
 
+      for (let i = 0; i < bahan_id.length; i++) {
+        const bId = Number(bahan_id[i]);
+        const qty = Number(debit?.[i]);
+        if (!bId || isNaN(bId)) {
+          return errorResponse(res, `Baris ke-${i + 1}: Bahan baku wajib dipilih.`, 400);
+        }
+        if (!qty || isNaN(qty) || qty <= 0) {
+          return errorResponse(res, `Baris ke-${i + 1}: Jumlah bawa (qty) wajib diisi minimal 1.`, 400);
+        }
+      }
+
       const result = await bukaTokoService.addStok(cabangId, adminId, {
         bahan_id,
         debit: Array.isArray(debit) ? debit : [],

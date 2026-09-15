@@ -43,7 +43,12 @@ Agen AI frontend wajib mematuhi panduan visual berikut menggunakan Tailwind CSS 
 *   **Validasi Hardware Kamera (Wajib):** 
     1. Ambil foto selfie wajah karyawan (kamera depan).
     2. Ambil foto luar, dalam, dan belakang outlet (kamera belakang). 
-    3. *Constraint:* Jika foto tidak lengkap, tombol "Lanjut" *disabled*. Gambar dikirim format *Base64* (.png).
+    3. *Constraint:* Jika foto tidak lengkap, tombol "Lanjut" *disabled*. Gambar dikirim format *Base64*.
+    4. **Format Penamaan Foto (Compact Naming Standard):**
+       - `luar_buka`: `new_luar_{buka_toko_id}.jpg`
+       - `dalam_buka`: `new_buka_{buka_toko_id}.jpg`
+       - `belakang_buka`: `new_belakang_{buka_toko_id}.jpg`
+       - `jaga_outlet.foto`: `new_kry_{buka_toko_id}_{karyawan_id}_{random_string_2_karakter}.jpg`
 *   **Eksekusi Database:** Insert data ke `buka_toko` dan `jaga_outlet`.
 
 ---
@@ -66,27 +71,32 @@ Agen AI frontend wajib mematuhi panduan visual berikut menggunakan Tailwind CSS 
 ## 4. Modul Checkout & Logika ERP (Backend Prisma Transaction)
 Saat "Bayar" ditekan, kirim payload ke API. Gunakan `$transaction` Prisma agar eksekusi di bawah ini berjalan atomik (bersamaan):
 
-**A. Pencatatan Transaksi**
+**A. Pencatatan Transaksi & Aturan Tanggal Operasional**
+*   **Zona Waktu Kasir:** Seluruh penentuan waktu (`created_at`, `updated_at`, dan waktu cetak struk) wajib mengikuti timezone kasir login di `users_kasir.time_zone` (`Asia/Jakarta` untuk WIB / UTC+7 atau `Asia/Makassar` untuk WITA / UTC+8).
+*   **Aturan Field `tgl` Penjualan:** Seluruh pencatatan transaksi penjualan (`invoice_kasir`, `penjualan_kasir`, `penjualan_varian`, `stok`, `jurnal`, `penjualan_gaji`, `penjualan_gaji_office`) field `tgl`-nya WAJIB mengikuti tanggal (`tgl`) dari `buka_toko` yang sedang aktif (buka), meskipun transaksi kasir terjadi lewat tengah malam keesokan harinya. Hal ini menjaga konsistensi tutup buku dan laporan shift kasir. Field `created_at` dan `updated_at` tetap mencatat waktu real-time kasir.
 *   Generate `no_invoice` (`'INV' + date('dmy') + randomstring(5)`).
 *   Insert `invoice_kasir` (`online = 0`, `print = 0`).
 *   Insert iterasi ke `penjualan_kasir` (`online = 0`) & `penjualan_varian`.
 
 **B. Pengurangan Stok via Resep (Inventori)**
-*   Iterasi ke `resep` tiap produk (`bahan_id`, `takaran`). Hitung HPP bahan dari `stok_gudang` / `harga_bahan`.
-*   Insert ke `stok`: `jenis = 'Keluar'`, `kredit = (qty produk * takaran)`.
+*   Iterasi ke `resep` tiap produk (`bahan_id`, `takaran`).
+*   **Filter Resep Aktif:** Hanya ambil resep yang berelasi dengan tabel `bahan` di mana field `aktif = 'Y'`.
+*   **Harga Satuan Bahan (HPP):** Diambil dari harga tertinggi di tabel `stok_gudang` (`jenis_bahan = 1, jenis = 1, void = 0, qty > 0, tgl >= '2026-02-22'`) dengan rumus `(COALESCE(harga, 0) + COALESCE(harga_hutang, 0)) / qty`. Jika tidak ditemukan, fallback ke `harga_bahan` (`kota_id`), lalu fallback ke `bahan.harga`.
+*   Insert ke `stok`: `jenis = 'Keluar'`, `status = 'buka'`, `kredit = (qty produk * takaran)`, `harga = Math.round(hppBahan)`.
 
 **C. Jurnal Pengeluaran Otomatis (Akuntansi)**
 *   Ambil dari `persen_pengeluaran` cabang tersebut. 
 *   `jenis = 1` (Persentase * harga normal qty). `jenis = 0` (Persentase * qty).
-*   Insert 2 baris (Debit & Kredit) ke tabel `jurnal` untuk setiap potongannya.
+*   Insert 2 baris (Debit & Kredit akun 26) ke tabel `jurnal` untuk setiap potongannya.
+*   **Keterangan Jurnal:** Field `ket` pada tabel `jurnal` WAJIB diisi dengan nama akun (`nm_akun` dari tabel `akun_pengeluaran`), bukan format no invoice.
 
 **D. Distribusi Bagi Hasil & Gaji**
 *   Bagi `total_pendapatan / jumlah_karyawan_jaga` (`ganti = 0`). Insert ke `penjualan_gaji`.
-*   Hitung hak kantor pusat dari `karyawan_office_kota` (Pusat), insert ke `penjualan_gaji_office`.
+*   Hitung hak kantor pusat dari `karyawan_office_kota` (Pusat), pastikan hanya memproses yang di tabel `karyawan_office` memiliki status `aktif = 1`, lalu insert ke `penjualan_gaji_office`.
 
 **E. Hardware Actions (Frontend)**
 *   Bersihkan keranjang.
-*   Trigger Cetak *Bluetooth Thermal Printer* Web API (Format: Logo, Waktu, Kasir, Order, Rincian, Subtotal, Kembalian).
+*   Trigger Cetak *Bluetooth Thermal Printer* Web API (Format: Logo, Waktu, Kasir, Order, Rincian, Subtotal, Kembalian, Box Antrian Khusus).
 *   Kirim pesan ke WA (Direct Message API).
 
 ---
