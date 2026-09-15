@@ -106,12 +106,23 @@ Saat "Bayar" ditekan, kirim payload ke API. Gunakan `$transaction` Prisma agar e
 *   List `invoice_kasir` HANYA untuk `buka_toko_id` saat ini. Aksi: Print, Detail, Refund.
 *   **Refund (Void):** Input alasan, update `void = 1` di `invoice_kasir` & `penjualan_kasir`. (Stok biarkan urusan Admin).
 
-**B. Pergantian Shift**
-*   Pilih karyawan dari *popup*. Update `ganti = 1` pada shift lama di `jaga_outlet`, create entri shift baru tanpa tutup toko.
+**B. Pergantian Shift (`POST /api/ganti-shift`)**
+*   Pilih satu atau lebih karyawan dari *modal popup* (`GET /api/karyawan`).
+*   **Transaksi Atomik (`prisma.$transaction`):**
+    1. Update semua data di tabel `jaga_outlet` pada `buka_toko_id` tersebut: set `ganti = 1` (shift lama selesai).
+    2. Looping array `karyawan_baru_ids`: jika sudah ada di tabel `jaga_outlet`, update `ganti = 0`. Jika belum ada, insert entri baru (`role = 3`, `ganti = 0`, `tgl` buka toko).
+    3. Sinkronisasi nama petugas aktif ke field `nm_karyawan` di tabel `buka_toko`.
 
-**C. Pengeluaran Kebutuhan**
-*   Muncul jika cabang > 1 kota. Form dinamis `barang_kebutuhan` & `qty`.
-*   Simpan ke `kebutuhan`. Otomatis insert jurnal (Debit/Kredit). Tombol "Hapus" harus me-revert jurnal terkait.
+**C. Pengeluaran Kebutuhan (`POST /api/kebutuhan` & `DELETE /api/kebutuhan/:kd_gabungan`)**
+*   **Kondisi Visibilitas UI:** Tombol Barang Kebutuhan HANYA BOLEH MUNCUL jika di kota tersebut terdapat **lebih dari 1 cabang aktif** (`jumlah_cabang_kota > 1`).
+*   **Form Dinamis:** Input dinamis tambah/hapus baris (Select `barang_kebutuhan` & Input `qty`).
+*   **Logika Jurnal Akuntansi Atomik:**
+    1. Generate `kd_gabungan` unik per item: `'INV' + date('dmy') + randomstring(5)`.
+    2. Cari Harga Pokok di tabel `stok_gudang`: `bahan_id = barang_id, jenis_bahan = 2, jenis = 1, void = 0, qty > 0`. Nilai maksimal rumus `(harga + harga_hutang) / qty`.
+    3. Markup 10%: `harga_bahan = harga + (harga * 10%)`. Jika tidak ditemukan, `harga_bahan = 0`.
+    4. Insert Jurnal Debit: `buku_id = 1, akun_id = 13, debit = harga_bahan * qty, kredit = 0, qty_debit = qty`.
+    5. Insert Jurnal Kredit: `buku_id = 1, akun_id = 14, debit = 0, kredit = harga_bahan * qty, qty_kredit = qty` dengan `kd_gabungan` yang sama.
+*   **Hapus Jurnal Kebutuhan:** Delete tabel `jurnal` berdasarkan `kd_gabungan`, otomatis menghapus sepasang jurnal (debit dan kredit) secara bersih.
 
 **D. Tutup Toko (Laporan EOD)**
 *   **Preview Laporan Layar:** Penjualan (omset), Kebutuhan (kas bersih), Barang Bawaan (Masuk - Keluar - Refund).

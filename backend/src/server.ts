@@ -5,6 +5,7 @@ import authRouter from './routes/auth';
 import bukaTokoRouter from './routes/bukaToko';
 import posRouter from './routes/pos';
 import checkoutRouter from './routes/checkout';
+import operasionalRouter from './routes/operasional';
 
 import path from 'path';
 
@@ -34,6 +35,7 @@ app.use('/api', authRouter);
 app.use('/api', bukaTokoRouter);
 app.use('/api', posRouter);
 app.use('/api', checkoutRouter);
+app.use('/api', operasionalRouter);
 
 // 404 Handler
 app.use((_req: Request, res: Response) => {

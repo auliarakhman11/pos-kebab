@@ -32,12 +32,15 @@ import {
   Banknote,
   ArrowRight,
   ChevronUp,
+  UserCheck,
 } from 'lucide-react';
 import api from '@/lib/api';
 import useAuthStore from '@/store/authStore';
 import useCartStore, { SelectedVarian } from '@/store/cartStore';
 import { useTheme } from '@/lib/theme';
 import ModalSuksesTransaksi from '@/components/ModalSuksesTransaksi';
+import ModalGantiShift from '@/components/ModalGantiShift';
+import ModalBarangKebutuhan from '@/components/ModalBarangKebutuhan';
 import {
   ProdukItem,
   KategoriItem,
@@ -102,10 +105,38 @@ export default function KasirPOSPage() {
   const [successTransactionPayload, setSuccessTransactionPayload] = useState<any | null>(null);
   const [isSubmittingCheckout, setIsSubmittingCheckout] = useState<boolean>(false);
 
+  // Modal Operasional: Ganti Shift & Barang Kebutuhan
+  const [isModalGantiShiftOpen, setIsModalGantiShiftOpen] = useState(false);
+  const [isModalKebutuhanOpen, setIsModalKebutuhanOpen] = useState(false);
+  const [statusOperasional, setStatusOperasional] = useState<{
+    cabang_id: number;
+    kota_id: number;
+    jumlah_cabang_kota: number;
+    is_kebutuhan_enabled: boolean;
+    buka_toko_id: number | null;
+    kode_buka_toko: string | null;
+    tgl_buka_toko: string | null;
+    karyawan_jaga: Array<{ id: number; karyawan_id: number; nama: string; ganti: number }>;
+  } | null>(null);
+
+  const fetchStatusOperasional = async () => {
+    try {
+      const res = await api.get('/operasional/status');
+      if (res.data?.success && res.data.data) {
+        setStatusOperasional(res.data.data);
+      }
+    } catch (err) {
+      console.error('Error get status operasional:', err);
+    }
+  };
+
   // Fallback image handling
   const [brokenImages, setBrokenImages] = useState<Record<number, boolean>>({});
 
   // 1. Inisialisasi Auth & Verifikasi Buka Toko
+  useEffect(() => {
+    fetchStatusOperasional();
+  }, []);
   useEffect(() => {
     initAuth();
 
@@ -770,19 +801,29 @@ export default function KasirPOSPage() {
             </button>
             <button
               type="button"
+              onClick={() => setIsModalGantiShiftOpen(true)}
+              className="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-all flex items-center gap-1.5 hover:bg-white/60 dark:hover:bg-slate-700/60 cursor-pointer"
+            >
+              <UserCheck className="w-3.5 h-3.5 text-amber-500" />
+              <span>Ganti Shift</span>
+            </button>
+            {statusOperasional?.is_kebutuhan_enabled && (
+              <button
+                type="button"
+                onClick={() => setIsModalKebutuhanOpen(true)}
+                className="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-all flex items-center gap-1.5 hover:bg-white/60 dark:hover:bg-slate-700/60 cursor-pointer"
+              >
+                <Layers className="w-3.5 h-3.5 text-amber-500" />
+                <span>Barang Kebutuhan</span>
+              </button>
+            )}
+            <button
+              type="button"
               onClick={() => alert('Halaman Daftar Transaksi sedang dalam pengembangan.')}
               className="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-all flex items-center gap-1.5 hover:bg-white/60 dark:hover:bg-slate-700/60 cursor-pointer"
             >
               <Receipt className="w-3.5 h-3.5" />
               <span>Daftar Transaksi</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => alert('Halaman Barang Kebutuhan sedang dalam pengembangan.')}
-              className="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-all flex items-center gap-1.5 hover:bg-white/60 dark:hover:bg-slate-700/60 cursor-pointer"
-            >
-              <Layers className="w-3.5 h-3.5" />
-              <span>Barang Kebutuhan</span>
             </button>
             <button
               type="button"
@@ -820,7 +861,7 @@ export default function KasirPOSPage() {
             <button
               type="button"
               onClick={handleLogout}
-              className="h-8 sm:h-9 px-2.5 sm:px-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-rose-50 dark:hover:bg-rose-950/40 hover:text-rose-600 dark:hover:text-rose-400 hover:border-rose-200 dark:hover:border-rose-900 text-slate-600 dark:text-slate-300 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs"
+              className="h-8 sm:h-9 px-2.5 sm:px-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-rose-50 dark:hover:bg-rose-950/40 hover:text-rose-600 dark:hover:text-rose-400 hover:border-rose-200 dark:border-rose-900 text-slate-600 dark:text-slate-300 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs"
             >
               <LogOut className="w-3.5 h-3.5" />
               <span className="hidden xs:inline">Keluar</span>
@@ -855,6 +896,30 @@ export default function KasirPOSPage() {
             <button
               type="button"
               onClick={() => {
+                setIsModalGantiShiftOpen(true);
+                setMobileNavOpen(false);
+              }}
+              className="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 flex items-center gap-1.5"
+            >
+              <UserCheck className="w-3.5 h-3.5 text-amber-500" />
+              <span>Ganti Shift</span>
+            </button>
+            {statusOperasional?.is_kebutuhan_enabled && (
+              <button
+                type="button"
+                onClick={() => {
+                  setIsModalKebutuhanOpen(true);
+                  setMobileNavOpen(false);
+                }}
+                className="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 flex items-center gap-1.5"
+              >
+                <Layers className="w-3.5 h-3.5 text-amber-500" />
+                <span>Barang Kebutuhan</span>
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => {
                 alert('Halaman Daftar Transaksi sedang dalam pengembangan.');
                 setMobileNavOpen(false);
               }}
@@ -862,17 +927,6 @@ export default function KasirPOSPage() {
             >
               <Receipt className="w-3.5 h-3.5" />
               <span>Daftar Transaksi</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                alert('Halaman Barang Kebutuhan sedang dalam pengembangan.');
-                setMobileNavOpen(false);
-              }}
-              className="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 flex items-center gap-1.5"
-            >
-              <Layers className="w-3.5 h-3.5" />
-              <span>Barang Kebutuhan</span>
             </button>
             <button
               type="button"
@@ -1304,6 +1358,26 @@ export default function KasirPOSPage() {
         isOpen={!!successTransactionPayload}
         onClose={handleSelesaiTransaksi}
         data={successTransactionPayload}
+      />
+
+      {/* ========================================================================= */}
+      {/* 7. MODAL GANTI SHIFT                                                      */}
+      {/* ========================================================================= */}
+      <ModalGantiShift
+        isOpen={isModalGantiShiftOpen}
+        onClose={() => setIsModalGantiShiftOpen(false)}
+        onSuccess={fetchStatusOperasional}
+        bukaTokoId={statusOperasional?.buka_toko_id}
+        currentKaryawanIds={(statusOperasional?.karyawan_jaga || []).map((j) => j.karyawan_id)}
+      />
+
+      {/* ========================================================================= */}
+      {/* 8. MODAL BARANG KEBUTUHAN (HPP STOK GUDANG + MARKUP 10%)                  */}
+      {/* ========================================================================= */}
+      <ModalBarangKebutuhan
+        isOpen={isModalKebutuhanOpen}
+        onClose={() => setIsModalKebutuhanOpen(false)}
+        bukaTokoId={statusOperasional?.buka_toko_id}
       />
     </div>
   );
