@@ -33,11 +33,16 @@ import {
   ArrowRight,
   ChevronUp,
   UserCheck,
+  RefreshCw,
+  Wifi,
+  WifiOff,
 } from 'lucide-react';
 import api from '@/lib/api';
 import useAuthStore from '@/store/authStore';
 import useCartStore, { SelectedVarian } from '@/store/cartStore';
 import { useTheme } from '@/lib/theme';
+import { db } from '@/lib/db';
+import { printReceiptBluetooth } from '@/utils/printBluetooth';
 import ModalSuksesTransaksi from '@/components/ModalSuksesTransaksi';
 import ModalGantiShift from '@/components/ModalGantiShift';
 import ModalBarangKebutuhan from '@/components/ModalBarangKebutuhan';
@@ -120,6 +125,120 @@ export default function KasirPOSPage() {
     tgl_buka_toko: string | null;
     karyawan_jaga: Array<{ id: number; karyawan_id: number; nama: string; ganti: number }>;
   } | null>(null);
+
+  // Modul 6: Offline-First States (Dexie.js)
+  const [isOnline, setIsOnline] = useState<boolean>(true);
+  const [offlineCount, setOfflineCount] = useState<number>(0);
+  const [isSyncing, setIsSyncing] = useState<boolean>(false);
+  const [syncNotification, setSyncNotification] = useState<{
+    type: 'success' | 'warning' | 'info' | 'error';
+    message: string;
+  } | null>(null);
+
+  const refreshOfflineCount = async () => {
+    try {
+      const count = await db.offline_transactions.count();
+      setOfflineCount(count);
+    } catch (e) {
+      console.error('Gagal membaca count Dexie:', e);
+    }
+  };
+
+  const syncOfflineTransactions = async () => {
+    if (isSyncing) return;
+    try {
+      const txs = await db.offline_transactions.toArray();
+      if (txs.length === 0) {
+        await refreshOfflineCount();
+        return;
+      }
+
+      setIsSyncing(true);
+      let successCount = 0;
+      let failCount = 0;
+
+      for (const tx of txs) {
+        try {
+          const res = await api.post('/checkout', tx.payload_data);
+          if (res.data?.success) {
+            if (tx.id) {
+              await db.offline_transactions.delete(tx.id);
+            }
+            successCount++;
+          } else {
+            failCount++;
+          }
+        } catch (err) {
+          console.error('Gagal sync transaksi offline ID:', tx.id, err);
+          failCount++;
+        }
+      }
+
+      await refreshOfflineCount();
+
+      if (successCount > 0 && failCount === 0) {
+        setSyncNotification({
+          type: 'success',
+          message: `Sinkronisasi Berhasil! ${successCount} transaksi offline telah dikirim ke server.`,
+        });
+      } else if (successCount > 0 && failCount > 0) {
+        setSyncNotification({
+          type: 'warning',
+          message: `${successCount} transaksi berhasil disinkronkan, ${failCount} masih tertunda.`,
+        });
+      } else if (failCount > 0) {
+        setSyncNotification({
+          type: 'error',
+          message: `Gagal menyinkronkan ${failCount} transaksi offline. Server belum merespons.`,
+        });
+      }
+    } catch (error) {
+      console.error('Error syncOfflineTransactions:', error);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    setIsOnline(navigator.onLine);
+    refreshOfflineCount();
+
+    const handleOnline = () => {
+      setIsOnline(true);
+      setSyncNotification({
+        type: 'info',
+        message: 'Koneksi kembali online! Memulai sinkronisasi otomatis...',
+      });
+      syncOfflineTransactions();
+    };
+
+    const handleOffline = () => {
+      setIsOnline(false);
+      setSyncNotification({
+        type: 'warning',
+        message: 'Koneksi internet terputus. Mode Offline aktif.',
+      });
+    };
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (syncNotification) {
+      const timer = setTimeout(() => {
+        setSyncNotification(null);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [syncNotification]);
 
   const fetchStatusOperasional = async () => {
     try {
@@ -306,7 +425,7 @@ export default function KasirPOSPage() {
   const uangKembalian = Math.max(0, nominalUangBayar - totalBelanja);
   const isNominalKurang = nominalUangBayar < totalBelanja;
 
-  // Handler Tombol Bayar (MODUL 4 - API Checkout ERP & Cetak Struk)
+  // Handler Tombol Bayar (MODUL 4 & MODUL 6 - Offline-First Fallback & Bluetooth Struk)
   const handleProsesPembayaran = async () => {
     if (cart.length === 0) {
       alert('Keranjang belanja masih kosong! Pilih produk terlebih dahulu.');
@@ -318,42 +437,132 @@ export default function KasirPOSPage() {
       return;
     }
 
+    const payload = {
+      pelanggan: {
+        nama: customerName.trim() || '',
+        no_tlp: customerPhone.trim() || '',
+      },
+      delivery_id: delivery_id,
+      pembayaran_id: selectedPembayaranId,
+      diskon: 0,
+      nominal_bayar: nominalUangBayar,
+      kembalian: uangKembalian,
+      items: cart.map((item) => ({
+        produk_id: item.produk_id,
+        nm_produk: item.nm_produk,
+        qty: item.qty,
+        harga: item.harga,
+        harga_normal: item.harga,
+        catatan: item.catatan,
+        varian: (item.varian || []).map((v) => ({
+          id: v.id,
+          nm_varian: v.nm_varian,
+          harga: v.harga,
+        })),
+      })),
+      buka_toko: {
+        kode: buka_toko_data?.kode || null,
+        buka_toko_id: buka_toko_data?.buka_toko_id || buka_toko_data?.id || null,
+      },
+    };
+
+    // Helper: Simpan ke Dexie.js saat Offline / Network Error
+    const processOfflineCheckout = async () => {
+      try {
+        // 1. Simpan payload transaksi ke Dexie.js
+        await db.offline_transactions.add({
+          payload_data: payload,
+          created_at: new Date().toISOString(),
+          status: 'pending',
+        });
+        await refreshOfflineCount();
+
+        // 2. Siapkan data struk offline
+        const deliveryItem = deliveries.find((d) => d.id === delivery_id);
+        const pembayaranItem = pembayarans.find((p) => p.id === selectedPembayaranId);
+        const offlineTimestamp = new Date();
+        const timeFormatted = offlineTimestamp.toLocaleTimeString('id-ID', {
+          hour: '2-digit',
+          minute: '2-digit',
+        });
+
+        const offlineReceiptData = {
+          no_invoice: `OFF-${Date.now().toString().slice(-6)}`,
+          urutan: 0,
+          cabang_nama: cabang?.nama || 'Cabang Kebab Yasmin',
+          cabang_telepon: (cabang as any)?.telepon || undefined,
+          waktu_transaksi: timeFormatted,
+          waktu_cetak: timeFormatted,
+          kasir_nama: user?.name || 'Kasir',
+          nm_costumer: customerName.trim() || undefined,
+          no_tlp: customerPhone.trim() || undefined,
+          jenis_order: deliveryItem?.delivery || 'Dine In',
+          pembayaran_nama: pembayaranItem?.pembayaran || 'Cash',
+          items: cart.map((item) => {
+            const varianTotal = (item.varian || []).reduce((sum, v) => sum + v.harga, 0);
+            const totalHarga = (item.harga + varianTotal) * item.qty;
+            return {
+              qty: item.qty,
+              nm_produk: item.nm_produk,
+              varian_str:
+                item.varian && item.varian.length > 0
+                  ? item.varian.map((v) => v.nm_varian).join(', ')
+                  : undefined,
+              harga_satuan: item.harga,
+              total_harga: totalHarga,
+              catatan: item.catatan || undefined,
+            };
+          }),
+          subtotal: totalBelanja,
+          diskon: 0,
+          total_bayar: totalBelanja,
+          dibayar: nominalUangBayar,
+          kembalian: uangKembalian,
+          is_offline: true,
+        };
+
+        // 3. Tampilkan notifikasi "Tersimpan Offline. Akan disinkronkan saat online."
+        setSyncNotification({
+          type: 'warning',
+          message: 'Tersimpan Offline. Akan disinkronkan saat online.',
+        });
+
+        // 4. Tetap jalankan fungsi print struk Bluetooth (berjalan lokal tanpa internet)
+        try {
+          await printReceiptBluetooth(offlineReceiptData);
+        } catch (printErr) {
+          console.warn('Cetak Bluetooth offline:', printErr);
+        }
+
+        // 5. Kosongkan keranjang (Zustand) agar kasir bisa melayani antrean pelanggan berikutnya
+        clearCart();
+        setCustomerName('');
+        setCustomerPhone('');
+        setPilihanBayarTipe('pas');
+        setCustomNominalInput('');
+        setIsCartDrawerOpen(false);
+
+        // 6. Tampilkan Modal Sukses Transaksi dengan data offline
+        setSuccessTransactionPayload(offlineReceiptData);
+      } catch (saveErr) {
+        console.error('Gagal menyimpan ke Dexie:', saveErr);
+        alert('Gagal menyimpan transaksi offline ke database lokal.');
+      }
+    };
+
+    // Cek jika sedang offline
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      await processOfflineCheckout();
+      return;
+    }
+
     try {
       setIsSubmittingCheckout(true);
-
-      const payload = {
-        pelanggan: {
-          nama: customerName.trim() || '',
-          no_tlp: customerPhone.trim() || '',
-        },
-        delivery_id: delivery_id,
-        pembayaran_id: selectedPembayaranId,
-        diskon: 0,
-        nominal_bayar: nominalUangBayar,
-        kembalian: uangKembalian,
-        items: cart.map((item) => ({
-          produk_id: item.produk_id,
-          nm_produk: item.nm_produk,
-          qty: item.qty,
-          harga: item.harga,
-          harga_normal: item.harga,
-          catatan: item.catatan,
-          varian: (item.varian || []).map((v) => ({
-            id: v.id,
-            nm_varian: v.nm_varian,
-            harga: v.harga,
-          })),
-        })),
-        buka_toko: {
-          kode: buka_toko_data?.kode || null,
-          buka_toko_id: buka_toko_data?.buka_toko_id || buka_toko_data?.id || null,
-        },
-      };
 
       const res = await api.post('/checkout', payload);
 
       if (res.data?.success && res.data?.data) {
-        // 1. Kosongkan keranjang di Zustand store sesuai instruksi Modul 4
+        // 1. Kosongkan keranjang di Zustand store
         clearCart();
 
         // 2. Reset input form kasir
@@ -370,11 +579,23 @@ export default function KasirPOSPage() {
       }
     } catch (err: any) {
       console.error('Error Checkout:', err);
-      const msg =
-        err.response?.data?.message ||
-        err.message ||
-        'Terjadi kesalahan saat memproses transaksi checkout.';
-      alert(`Checkout Gagal: ${msg}`);
+      // Deteksi jika Network Error / Server unreachable
+      const isNetworkError =
+        !err.response ||
+        err.code === 'ERR_NETWORK' ||
+        err.message?.includes('Network Error') ||
+        (err.response && err.response.status >= 500);
+
+      if (isNetworkError) {
+        // Fallback: Jangan hentikan aplikasi, simpan ke Dexie & cetak struk
+        await processOfflineCheckout();
+      } else {
+        const msg =
+          err.response?.data?.message ||
+          err.message ||
+          'Terjadi kesalahan saat memproses transaksi checkout.';
+        alert(`Checkout Gagal: ${msg}`);
+      }
     } finally {
       setIsSubmittingCheckout(false);
     }
@@ -763,6 +984,34 @@ export default function KasirPOSPage() {
 
   return (
     <div className="min-h-screen bg-slate-100 dark:bg-slate-950 flex flex-col text-slate-800 dark:text-slate-100 font-sans transition-colors pb-20 lg:pb-0">
+      {/* NOTIFIKASI TOAST SINKRONISASI / STATUS JARINGAN */}
+      {syncNotification && (
+        <div
+          className={`fixed top-14 left-1/2 -translate-x-1/2 z-50 px-4 py-2.5 rounded-2xl shadow-xl border text-xs font-bold flex items-center gap-2 transition-all animate-in fade-in slide-in-from-top-3 max-w-[90vw] ${
+            syncNotification.type === 'success'
+              ? 'bg-emerald-50 border-emerald-300 text-emerald-800 dark:bg-emerald-950 dark:border-emerald-800 dark:text-emerald-200'
+              : syncNotification.type === 'warning'
+              ? 'bg-amber-50 border-amber-300 text-amber-800 dark:bg-amber-950 dark:border-amber-800 dark:text-amber-200'
+              : syncNotification.type === 'error'
+              ? 'bg-rose-50 border-rose-300 text-rose-800 dark:bg-rose-950 dark:border-rose-800 dark:text-rose-200'
+              : 'bg-sky-50 border-sky-300 text-sky-800 dark:bg-sky-950 dark:border-sky-800 dark:text-sky-200'
+          }`}
+        >
+          {syncNotification.type === 'success' && <Check className="w-4 h-4 text-emerald-600 shrink-0" />}
+          {syncNotification.type === 'warning' && <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />}
+          {syncNotification.type === 'error' && <X className="w-4 h-4 text-rose-600 shrink-0" />}
+          {syncNotification.type === 'info' && <RefreshCw className="w-4 h-4 text-sky-600 animate-spin shrink-0" />}
+          <span>{syncNotification.message}</span>
+          <button
+            type="button"
+            onClick={() => setSyncNotification(null)}
+            className="ml-2 p-0.5 hover:bg-black/10 dark:hover:bg-white/10 rounded-full cursor-pointer"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
+
       {/* ========================================================================= */}
       {/* 1. TOP HEADER KASIR POS                                                   */}
       {/* ========================================================================= */}
@@ -845,8 +1094,55 @@ export default function KasirPOSPage() {
             </button>
           </nav>
 
-          {/* SISI KANAN: TOGGLE DARK MODE + TOMBOL KELUAR (+ HAMBURGER UNTUK MOBILE/TABLET) */}
-          <div className="flex items-center gap-2">
+          {/* SISI KANAN: STATUS JARINGAN (ONLINE / OFFLINE) + TOMBOL SINKRON + TOGGLE DARK MODE + TOMBOL KELUAR */}
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            {/* Indikator Status Jaringan (🟢 Online / 🔴 Offline) */}
+            <div
+              className={`h-8 sm:h-9 px-2.5 sm:px-3 rounded-xl border text-xs font-bold flex items-center gap-1.5 transition-all shadow-2xs ${
+                isOnline
+                  ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400'
+                  : 'bg-rose-50 dark:bg-rose-950/40 border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-400 animate-pulse'
+              }`}
+              title={isOnline ? 'Terhubung ke server online' : 'Mode offline aktif, transaksi disimpan ke IndexedDB'}
+            >
+              <span
+                className={`w-2 h-2 rounded-full shrink-0 ${
+                  isOnline ? 'bg-emerald-500' : 'bg-rose-500'
+                }`}
+              />
+              <span className="hidden xs:inline">
+                {isOnline ? 'Online' : 'Offline'}
+              </span>
+              {offlineCount > 0 && (
+                <span
+                  className={`ml-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-black ${
+                    isOnline
+                      ? 'bg-amber-100 dark:bg-amber-900/60 text-amber-800 dark:text-amber-200'
+                      : 'bg-rose-200 dark:bg-rose-900 text-rose-800 dark:text-rose-100'
+                  }`}
+                  title={`${offlineCount} transaksi tersimpan lokal`}
+                >
+                  {offlineCount}
+                </span>
+              )}
+            </div>
+
+            {/* Tombol Sinkronisasi Manual (jika online & ada offlineCount) */}
+            {isOnline && offlineCount > 0 && (
+              <button
+                type="button"
+                disabled={isSyncing}
+                onClick={syncOfflineTransactions}
+                className="h-8 sm:h-9 px-2.5 sm:px-3 rounded-xl border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/50 hover:bg-amber-100 text-amber-700 dark:text-amber-300 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs disabled:opacity-50"
+                title="Sinkronkan transaksi offline sekarang"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin' : ''}`} />
+                <span className="hidden sm:inline">
+                  {isSyncing ? 'Sinkron...' : `Sinkron (${offlineCount})`}
+                </span>
+              </button>
+            )}
+
             {/* Tombol Toggle Theme Light / Dark (Di sebelah kiri tombol Keluar) */}
             <button
               type="button"

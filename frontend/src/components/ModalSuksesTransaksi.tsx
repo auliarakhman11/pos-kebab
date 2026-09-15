@@ -47,6 +47,7 @@ export interface ModalSuksesTransaksiProps {
     dibayar: number;
     kembalian: number;
     wa_link?: string;
+    is_offline?: boolean;
   } | null;
 }
 
@@ -101,21 +102,30 @@ export default function ModalSuksesTransaksi({
     ? data.cabang_nama
     : `Cabang ${data.cabang_nama}`;
 
+  const isOfflineTx = !!data.is_offline || data.no_invoice?.startsWith('OFF-');
+
   return (
     <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-in fade-in duration-200">
       <div className="relative bg-white dark:bg-slate-900 rounded-3xl max-w-lg w-full border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden my-auto transition-colors">
-        {/* HEADER MODAL DENGAN STATUS SUKSES */}
-        <div className="bg-gradient-to-r from-emerald-600 to-teal-600 p-5 text-white flex items-center justify-between">
+        {/* HEADER MODAL DENGAN STATUS SUKSES / OFFLINE */}
+        <div
+          className={`p-5 text-white flex items-center justify-between ${
+            isOfflineTx
+              ? 'bg-gradient-to-r from-amber-600 to-amber-700'
+              : 'bg-gradient-to-r from-emerald-600 to-teal-600'
+          }`}
+        >
           <div className="flex items-center gap-3">
             <div className="w-11 h-11 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center shrink-0 border border-white/30">
               <CheckCircle2 className="w-6 h-6 text-white" />
             </div>
             <div>
               <h2 className="text-base font-black tracking-tight leading-tight">
-                Transaksi Berhasil Dicatat!
+                {isOfflineTx ? 'Transaksi Tersimpan Offline!' : 'Transaksi Berhasil Dicatat!'}
               </h2>
-              <p className="text-xs text-emerald-100 font-medium mt-0.5">
-                No. Invoice: <span className="font-mono font-bold">{data.no_invoice}</span>
+              <p className="text-xs text-white/80 font-medium mt-0.5">
+                {isOfflineTx ? 'Akan disinkronkan saat online' : `No. Invoice: `}
+                {!isOfflineTx && <span className="font-mono font-bold">{data.no_invoice}</span>}
               </p>
             </div>
           </div>
