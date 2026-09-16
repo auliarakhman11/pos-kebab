@@ -15,7 +15,7 @@ import {
   Sun,
   Moon,
 } from 'lucide-react';
-import axios from 'axios';
+import api from '@/lib/api';
 import useAuthStore from '@/store/authStore';
 import { useTheme } from '@/lib/theme';
 
@@ -51,7 +51,7 @@ export default function LoginPage() {
     const fetchKasirList = async () => {
       try {
         setLoadingKasirList(true);
-        const res = await axios.get('http://localhost:5000/api/kasir-list');
+        const res = await api.get('/kasir-list');
         if (res.data?.success && Array.isArray(res.data?.data)) {
           setKasirList(res.data.data);
           if (res.data.data.length > 0) {
@@ -60,7 +60,7 @@ export default function LoginPage() {
         }
       } catch (err) {
         console.error('Failed to load kasir list:', err);
-        setErrorMessage('Gagal memuat daftar kasir dari server backend. Pastikan server aktif di port 5000.');
+        setErrorMessage('Gagal memuat daftar kasir dari server backend. Pastikan server backend sedang aktif.');
       } finally {
         setLoadingKasirList(false);
       }
@@ -84,7 +84,7 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      const response = await axios.post('http://localhost:5000/api/login', {
+      const response = await api.post('/login', {
         username: selectedUsername,
         password,
       });
@@ -112,7 +112,7 @@ export default function LoginPage() {
       console.error('Login error:', err);
       const serverMessage =
         err.response?.data?.message ||
-        'Gagal terhubung ke server backend (port 5000). Pastikan backend sedang berjalan.';
+        'Gagal terhubung ke server backend. Pastikan backend sedang berjalan.';
       setErrorMessage(serverMessage);
     } finally {
       setLoading(false);
