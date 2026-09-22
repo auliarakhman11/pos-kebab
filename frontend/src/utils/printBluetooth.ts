@@ -28,119 +28,6 @@ export interface ReceiptDataForPrint {
   kembalian: number;
 }
 
-// Data Raster Bit Image Monokrom Logo Resmi Kebab Yasmin (ESC/POS GS v 0)
-// Lebar: 384 dots (48 bytes, terpusat rapi di printer 58mm & 80mm), Tinggi: 109 dots (~1.3 cm)
-// Diproses dengan high-contrast dithering & 100% offline-ready tanpa delay koneksi/canvas
-export const KEBAB_YASMIN_LOGO_RASTER_B64 =
-  'HXYwADAAbQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA' +
-  'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA' +
-  'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA' +
-  'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA' +
-  'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA' +
-  'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA' +
-  'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA' +
-  'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA' +
-  'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA' +
-  'AAAAAAAAAAAAAAAAAB/8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA' +
-  'AAAD/8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAH/+AAAAAAAA' +
-  'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAH//AAAAAAAAAAAAAAAAAAAAAA' +
-  'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP//AA/gAH4AAAAAAAAAAAAAeAAAAAAAAAAAAAAAAA' +
-  'AAAAAAAAAAAAAAAAAAAAAAAP//AA/wAP4AAAAAAAAAAAAA/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA' +
-  'AAAAAAAAAf//gAf4AfwAAAAAAAAAAAAAfgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAf//gA' +
-  'P4AfwAAAAAAAAAAAAA/gAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPw///gAP8A/gAAAAAAAAA' +
-  'AAAAfgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAf8///wAH8A/gAAAAAAAAAAAAAAAAAAAAAAA' +
-  'AAAAAAAAAAAAAAAAAAAAAAAAAAAA/+///wAH+B/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA' +
-  'AAAAAAAAAAAAAB/////wAD+B/A/+AB/wAD/w/8AeAH/gAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB' +
-  '/////wAD/D+D//gH/8AP////A/Af/4AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB/////wAB/D+H//' +
-  'wP/+Af////gfg//8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHj/////wAA/n8H//wf//A/////wfh/' +
-  '/+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAf//////wAA/n8P//4///g/////wfh//+AAAAAAAAAAAA' +
-  'AAAAAAAAAAAAAAAAAAAA///////wAAf34PwP4/A/h/h/4f4fj/D/AAAAAAAAAAAAAAAAAAAAAAAAAA' +
-  'AAAAAB///////wAAf/4AAH4/Afh/A/wP4fj+B/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB///////w' +
-  'AAP/wAAH4/gHh+AfgH4fj8A/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB///////gAAH/gAAf4/4AB+' +
-  'AfgH4fj8A/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD///////gAAH/gAP/4//gB+AfgH4fj8A/AAAA' +
-  'AAAAAAAAAAAAAAAAAAAAAAAAAAAD///////wAAD/AB//4f/8B+AfgH4fj8A/AAAAAAAAAAAAAAAAAA' +
-  'AAAAAAAAAAAAf/////////gAD/AH//4f//B+AfgH4fj8A/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP/' +
-  '////////wAB/AP/34H//h+AfgH4fj8A/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAf/////////4AB+AP' +
-  '8H4D//x+AfgH4fj8A/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//////////8AB+AfwH4AP/x+AfgH4f' +
-  'j8A/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//////////8AB+AfgH4AA/x+AfgH4fj8A/AAAAAAAAAAA' +
-  'AAAAAAAAAAAAAAAAAB//////////+AB+AfgH5+Afx+AfgH4/j8A/AAAAAAAAAAAAAAAAAAAAAAAAAAA' +
-  'AAB/////9////+AB/AfgP5/APx+AfgH4/j8A/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAB/////qv///+' +
-  'AB/Afwfx/gfx+AfgH4/j8A/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAB/////VX///+AB/Af//w///x+Af' +
-  'gH4/j8A/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAB////+qr///+AB/AP//g///h+AfgH4/j8A/AAAAAAA' +
-  'AAAAAAAAAAAAAAAAAAAAAB//9f9VX///+AB/AP//Af//B+AfgH4/j8A/AAAAAAAAAAAAAAAAAAAAAAA' +
-  'AAAAAB//6r+qv///8AA/AH/+AP/+B+AfgH4/j8A/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//1V9Vf/' +
-  '//8AAeAB/4AD/4B+AfgD4fD8AfAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//qr6q/qv/8AAAAAAAAAAA' +
-  'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAf/VV9V/VX/8AAAAAAAAAAAAAAAAAAAAAAAAAA' +
-  'AAAAAAAAAAAAAAAAAAAAAAAAAf/qr6r+qr/8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA' +
-  'AAAAAAAAAAAf/VX9X9VV/8AAAAAAAAAAAAAAAAAAAAfAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAf/qr' +
-  '//6qq/8AAAAAAAAAAAAAAAAAAABgwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAf/1X//1VX/8AAAAAAA' +
-  'AAAAAAAAAAAACAIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAf/+///qqv++AAAAOAPgAAOAAAAAcAAEA' +
-  'EAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAfP////1Vf4+AAAAeAfgAAPAAAAAeAAJwCAAAAAAAAAAAAA' +
-  'AAAAAAAAAAAAAAAAAAfB//Af6r/w+AAAA+A/AAAPgAAAAfAAJ/6AAAAAAAAAAAAAAAAAAAAAAAAAAA' +
-  'AAAfAf+AH9X/A+AAAA+B+AAAPgAAAAfAAI/6AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAfAH/AD6v+A+' +
-  'AAAA+D8AAAPgAAAAfAAQGKAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAfAB/wB9f4A+AAAA+H4AfgPjgA' +
-  'fgfHgQgDAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAfAAf8A+/ww+AAAA+PwB/4Pv8B/4ff4Q/iAAAAAA' +
-  'AAAAAAAAAAAAAAAAAAAAAAAAAfAAH+A//Bw+AAAA+fgD/8P/+D/8f/8J/iAAAAAAAAAAAAAAAAAAAA' +
-  'AAAAAAAAAAAfAAB/gf+Aw+AAAA+/AH/+P/+H/+f/8J/iAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAfAAA' +
-  '/wf8AA+AAAA/+AHw+P5/Hw+fz+EBkAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAfAAAP8fwAA+AAAA/+AP' +
-  'gfPwfAAefg+GAMAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAfAAED+fgAA+AAAA//APgfPgfAA+fA+GAY' +
-  'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAfAAOB//BgA+AAAA//gP//PgPgf+fAfP/gAAAAAAAAAAAAAA' +
-  'AAAAAAAAAAAAAAAAAfAAOAf+DgA+AAAA//wP//PgPj/+fAfAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA' +
-  'AAPAAAAP8BgA+AAAA+PwP//PgPn/+fAfAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPAAAAH8AAA+A' +
-  'AAA+H4P//PgPn4efAfAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPAAAAB+AAY+AAAA+D8PgAPgPvg' +
-  'efAfAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPAAAAA/AA4+AAAA+B+PgAPgfPg+fA+AAAAAAAAAA' +
-  'AAAAAAAAAAAAAAAAAAPAAAAAfgAYeAAAA+B+PwfPwfPg+fg+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA' +
-  'AAAPAAABwPwAAeAAAA+A/H5+H5/Pz8Pz+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPAAABwH4AAe' +
-  'AAAA+Afj/+H/+H/8P/8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPAAAAgD8AAeAAAA+APj/8D/8H/' +
-  '4H/4AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPAAOAAB+AAeAAAA+APw/4B/4D/wB/wAAAAAAAAAAA' +
-  'AAAAAAAAAAAAAAAAAAAAAAPAAOAAA/AAeAAAAAAAAHAAAAAcAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA' +
-  'AAAAAAPAAEAAAfAAeAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPAAAAAAPg' +
-  'AeAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP/////////+AAAAAAAAAAAAA' +
-  'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP/////////+IAAAAAAAAAAAAAAAAAAAAAAAAAAA' +
-  'AAAAAAAAAAAAAAAAAAAAAAABP/////////8YAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA' +
-  'AAAAAAAABv/////////8YAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABn/////' +
-  '////4wAcAAAAAAAAABiAABgAGBwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAz/////////5wB+AAAAAAA' +
-  'AAD3AABgAGAwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA5/////////zgB+REhocTiIcDzGg5sHGxwAAA' +
-  'AAAAAAAAAAAAAAAAAAAAAAAAAAAY/////////HABm5v39+f3M+DzPz9+fH5wAAAAAAAAAAAAAAAAAAA' +
-  'AAAAAAAAAAAAMf///////+OAB45v3dmd3N3D7dzd3bndgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHH/' +
-  '//////4cAA87umcuZ3M3Dfc2NmLmNgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADh///////hwAAezuOd' +
-  '+Z2c+Dfcz5nfsdgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA4P/////8AAADOzuH9uZ39mDPdyBnbuYA' +
-  'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/////AAAAD+/uH7/539/DPf3Z+/37gAAAAAAAAAAAAAAA' +
-  'AAAAAAAAAAAAAAAAAAAB///gAAAAB8fsDZ2Zhd/DHNj44dnzgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA' +
-  'AG4AAGcAAAZwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAH4AAH4AAAfgAAA' +
-  'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADgAADwAAAPAAAAAAAAAAAAAAAAAAA' +
-  'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA' +
-  'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA' +
-  'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA' +
-  'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA' +
-  'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA' +
-  'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA' +
-  'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA' +
-  'AAAAAAAAAAAAAAAAAAAAAA=';
-
-let cachedLogoRasterBytes: Uint8Array | null = null;
-
-export function getLogoRasterBytes(): Uint8Array {
-  if (cachedLogoRasterBytes) return cachedLogoRasterBytes;
-  try {
-    if (typeof atob === 'function') {
-      const bin = atob(KEBAB_YASMIN_LOGO_RASTER_B64);
-      const bytes = new Uint8Array(bin.length);
-      for (let i = 0; i < bin.length; i++) {
-        bytes[i] = bin.charCodeAt(i);
-      }
-      cachedLogoRasterBytes = bytes;
-      return bytes;
-    } else if (typeof Buffer !== 'undefined') {
-      cachedLogoRasterBytes = new Uint8Array(Buffer.from(KEBAB_YASMIN_LOGO_RASTER_B64, 'base64'));
-      return cachedLogoRasterBytes;
-    }
-  } catch (err) {
-    console.warn('Gagal decode ESC/POS logo:', err);
-  }
-  return new Uint8Array(0);
-}
-
 // Byte Command ESC/POS Standard
 export const ESC_COMMANDS = {
   INIT: [0x1b, 0x40], // Inisialisasi printer
@@ -151,14 +38,10 @@ export const ESC_COMMANDS = {
   BOLD_OFF: [0x1b, 0x45, 0x00],
   UNDERLINE_ON: [0x1b, 0x2d, 0x01],
   UNDERLINE_OFF: [0x1b, 0x2d, 0x00],
-  FONT_A: [0x1b, 0x4d, 0x00], // Font A Standar (12x24 dots, 32 kolom pada 58mm)
-  FONT_B: [0x1b, 0x4d, 0x01], // Font B Kecil / Compressed (9x17 dots, ~40-42 kolom pada 58mm) -> Hemat kertas!
   FONT_NORMAL: [0x1d, 0x21, 0x00],
   FONT_DOUBLE_SIZE: [0x1d, 0x21, 0x11], // 2x Lebar & 2x Tinggi
   FONT_LARGE: [0x1d, 0x21, 0x22], // 3x
   FONT_HUGE: [0x1d, 0x21, 0x33], // 4x Font untuk Nomor Antrian
-  LINE_SPACING_DEFAULT: [0x1b, 0x32], // Default line spacing (~32-34 dots)
-  LINE_SPACING_TIGHT: [0x1b, 0x33, 20], // Spasi baris rapat (20 dots) -> Memangkas panjang kertas ~35%!
   FEED_LINES: (n: number) => [0x1b, 0x64, n],
   CUT_PAPER: [0x1d, 0x56, 0x00], // Full Cut
   PARTIAL_CUT: [0x1d, 0x56, 0x01], // Partial Cut
@@ -206,26 +89,6 @@ export class EscPosBuilder {
     return this;
   }
 
-  fontSmall(): this {
-    this.buffer.push(...ESC_COMMANDS.FONT_B);
-    return this;
-  }
-
-  fontNormal(): this {
-    this.buffer.push(...ESC_COMMANDS.FONT_A);
-    return this;
-  }
-
-  lineSpacingTight(spacing: number = 20): this {
-    this.buffer.push(0x1b, 0x33, spacing);
-    return this;
-  }
-
-  lineSpacingDefault(): this {
-    this.buffer.push(...ESC_COMMANDS.LINE_SPACING_DEFAULT);
-    return this;
-  }
-
   fontSize(type: 'normal' | 'double' | 'large' | 'huge'): this {
     switch (type) {
       case 'double':
@@ -244,25 +107,6 @@ export class EscPosBuilder {
     return this;
   }
 
-  rawBytes(bytes: Uint8Array | number[]): this {
-    for (let i = 0; i < bytes.length; i++) {
-      this.buffer.push(bytes[i]);
-    }
-    return this;
-  }
-
-  printLogo(): this {
-    // Karena logo gambar raster (GS v 0) sering corrupt/rusak pada beberapa printer Bluetooth,
-    // kita ganti menjadi teks tebal berukuran ganda agar selalu aman, rapi, dan terbaca jelas.
-    this.alignCenter();
-    this.bold(true);
-    this.fontSize('double');
-    this.line('KEBAB YASMIN');
-    this.fontSize('normal');
-    this.bold(false);
-    return this;
-  }
-
   text(str: string): this {
     const bytes = this.encoder.encode(str);
     for (let i = 0; i < bytes.length; i++) {
@@ -276,13 +120,13 @@ export class EscPosBuilder {
     return this;
   }
 
-  feed(lines: number = 1): this {
+  feed(lines: number = 2): this {
     this.buffer.push(...ESC_COMMANDS.FEED_LINES(lines));
     return this;
   }
 
   cut(): this {
-    this.feed(2); // Cukup 2 feed agar pas di pisau cutter tanpa membuang kertas
+    this.feed(3);
     this.buffer.push(...ESC_COMMANDS.CUT_PAPER);
     return this;
   }
@@ -290,31 +134,22 @@ export class EscPosBuilder {
   /**
    * Format dua kolom teks kiri dan kanan (misal nama barang di kiri, harga di kanan)
    */
-  twoColumns(left: string, right: string, width: number = 38): this {
+  twoColumns(left: string, right: string, width: number = 32): this {
     const spaceCount = width - left.length - right.length;
     if (spaceCount >= 0) {
       this.line(left + ' '.repeat(spaceCount) + right);
     } else {
-      // Jika teks kiri terlalu panjang, buat baris kedua rapi
+      // Jika teks kiri terlalu panjang, potong atau buat 2 baris
       const maxLeftWidth = width - right.length - 1;
       this.line(left.substring(0, maxLeftWidth) + ' ' + right);
       if (left.length > maxLeftWidth) {
-        // Cari indentasi (misal jika diawali "1  " maka gunakan spasi sepanjang itu)
-        const match = left.match(/^(\d+\s+)/);
-        const indentStr = match ? ' '.repeat(match[1].length) : '  ';
-        let remainingText = left.substring(maxLeftWidth).trim();
-        
-        while (remainingText.length > 0) {
-          const chunk = remainingText.substring(0, width - indentStr.length);
-          this.line(indentStr + chunk);
-          remainingText = remainingText.substring(width - indentStr.length).trim();
-        }
+        this.line('  ' + left.substring(maxLeftWidth));
       }
     }
     return this;
   }
 
-  divider(width: number = 38, char: string = '-'): this {
+  divider(width: number = 32, char: string = '-'): this {
     this.line(char.repeat(width));
     return this;
   }
@@ -338,14 +173,10 @@ export function formatReceiptDateTime(date: Date = new Date()): string {
 }
 
 /**
- * Generate Byte Array ESC/POS lengkap sesuai format struk resmi Kebab Yasmin.
- * Didesain khusus hemat kertas (Font B 9x17 + Line Spacing rapat 20 dots + Logo Kebab Yasmin).
+ * Generate Byte Array ESC/POS lengkap sesuai format struk resmi Kebab Yasmin
  */
-export function generateEscPosReceiptBytes(data: ReceiptDataForPrint, width: number = 38): Uint8Array {
+export function generateEscPosReceiptBytes(data: ReceiptDataForPrint, width: number = 32): Uint8Array {
   const b = new EscPosBuilder();
-
-  // 1. CETAK LOGO RESMI KEBAB YASMIN DI ATAS STRUK
-  b.printLogo();
 
   const formattedCabang = data.cabang_nama?.toLowerCase().startsWith('cabang')
     ? data.cabang_nama
@@ -355,92 +186,104 @@ export function generateEscPosReceiptBytes(data: ReceiptDataForPrint, width: num
   const waktuTransaksi = data.waktu_transaksi || formatReceiptDateTime();
   const waktuCetak = data.waktu_cetak || formatReceiptDateTime();
   const kasirNama = data.kasir_nama || 'Kasir';
-  const pelangganNama = data.nm_costumer || '-';
+  const pelangganNama = data.nm_costumer || '';
   const jenisOrder = data.jenis_order || 'Normal';
 
-  // 2. HEADER STRUK (Rata Tengah)
+  // 1. HEADER STRUK (Rata Tengah)
   b.alignCenter();
   b.bold(true);
   b.line(formattedCabang);
   b.bold(false);
   b.line('Surganya Ngebab!');
-  b.line(`Telp: ${telepon}`);
+  b.line(telepon);
+  b.line();
 
-  // 3. METADATA TRANSAKSI (Rata Kiri, sejajar dengan spasi agar rapi)
-  b.divider(width, '-');
+  // 2. METADATA TRANSAKSI (Rata Kiri)
   b.alignLeft();
-  if (data.no_invoice) {
-    b.line(`No. Inv     : ${data.no_invoice}`);
-  }
-  b.line(`Waktu       : ${waktuTransaksi}`);
-  b.line(`Kasir       : ${kasirNama}`);
-  b.line(`Costumer    : ${pelangganNama}`);
-  b.line(`Jenis Order : ${jenisOrder}`);
-  b.line(`Antrian     : ${data.urutan}`); // Antrian disejajarkan ke kiri
+  b.line(`Waktu         : ${waktuTransaksi}`);
+  b.line(`Kasir         : ${kasirNama}`);
+  b.line(`Costumer      : ${pelangganNama}`);
+  b.line(`Jenis Order   : ${jenisOrder}`);
 
-  // 4. GARIS PEMISAH
+  // Antrian di tengah
+  b.alignCenter();
+  b.bold(true);
+  b.line(`Antrian       : ${data.urutan}`);
+  b.bold(false);
+
+  // 3. GARIS PEMISAH
   b.divider(width, '-');
 
-  // 5. DETAIL ITEM PESANAN
+  // 4. DETAIL ITEM PESANAN
   b.alignLeft();
   let totalItemCount = 0;
   for (const item of data.items) {
     totalItemCount += item.qty;
     const priceStr = item.total_harga.toLocaleString('id-ID');
-    const firstLineLeft = `${item.qty}  ${item.nm_produk}`;
+    const firstLineLeft = `${item.qty}   ${item.nm_produk}`;
 
     b.twoColumns(firstLineLeft, priceStr, width);
 
     if (item.varian_str) {
-      b.line(`   + ${item.varian_str}`);
+      b.line(`    ${item.varian_str}`);
     }
 
     if (item.catatan) {
-      b.line(`   (${item.catatan})`);
+      b.line(`    (${item.catatan})`);
     }
   }
 
-  // 6. GARIS PEMISAH
+  // 5. GARIS PEMISAH
   b.divider(width, '-');
 
-  // 7. RINGKASAN SUBTTOTAL, DISKON, TOTAL, BAYAR, KEMBALIAN
+  // 6. RINGKASAN SUBTTOTAL, DISKON, TOTAL, BAYAR, KEMBALIAN
   b.alignLeft();
-  b.twoColumns(`Subtotal (${totalItemCount} item)`, data.subtotal.toLocaleString('id-ID'), width);
+  b.twoColumns(`Subtotal ${totalItemCount} Produk`, data.subtotal.toLocaleString('id-ID'), width);
 
   if (data.diskon && data.diskon > 0) {
-    b.twoColumns('Diskon Promo', `-${data.diskon.toLocaleString('id-ID')}`, width);
+    b.twoColumns('Diskon', `-${data.diskon.toLocaleString('id-ID')}`, width);
   }
 
   b.bold(true);
-  b.twoColumns('TOTAL BAYAR', data.total_bayar.toLocaleString('id-ID'), width);
+  b.twoColumns('Total Pembayaran', data.total_bayar.toLocaleString('id-ID'), width);
   b.bold(false);
-  b.twoColumns('Tunai / Bayar', data.dibayar.toLocaleString('id-ID'), width);
+  b.twoColumns('Dibayar', data.dibayar.toLocaleString('id-ID'), width);
   b.twoColumns('Kembalian', data.kembalian.toLocaleString('id-ID'), width);
 
   b.divider(width, '=');
 
-  // 8. FOOTER STRUK (Rata Tengah)
+  // 7. FOOTER STRUK
   b.alignCenter();
-  b.line('Terima Kasih Atas Kunjungan Anda');
-  b.line('IG: @kebabyasmin.id | YT: kebabyasmin');
+  b.line('Terimakasih');
+  b.line('Instagram : kebabyasmin.id');
+  b.line('Youtube : kebabyasmin');
   b.bold(true);
-  b.line('*** LUNAS / TERBAYAR ***');
+  b.line('*** TERBAYAR ***');
   b.bold(false);
-  b.line(`<--- ${waktuCetak} --->`);
+  b.line(`<------- ${waktuCetak} ------->`);
+  b.line();
 
-  // 9. TIKET NOMOR ANTRIAN (Ringkas, hemat kertas & tetap jelas untuk kasir/dapur)
-  b.feed(1);
-  b.divider(width, '-');
-  b.bold(true);
-  b.line('NOMOR ANTRIAN');
-  b.fontSize('double');
-  b.line(` ${data.urutan} `);
-  b.fontSize('normal');
-  b.line(formattedCabang);
-  b.divider(width, '=');
-
-  // 10. FEED & CUT (Minimal feed 2 agar pas cutter printer, tidak boros)
+  // 8. JEDA KERTAS / TIKET NOMOR ANTRIAN KHUSUS
   b.feed(2);
+  b.line('+------------------------------+');
+  b.bold(true);
+  b.line('Nomor Antrian');
+  b.line(formattedCabang);
+  b.line();
+
+  // Nomor Antrian Font Ekstra Besar & Tebal
+  b.fontSize('huge');
+  b.underline(true);
+  b.line(` ${data.urutan} `);
+  b.underline(false);
+  b.fontSize('normal');
+  b.bold(false);
+
+  b.line();
+  b.line('+------------------------------+');
+
+  // 9. FEED & CUT
+  b.feed(4);
   b.cut();
 
   return b.getBytes();
@@ -520,23 +363,23 @@ export interface LaporanEodDataForPrint {
 }
 
 /**
- * Generate Byte-array ESC/POS untuk Laporan EOD Tutup Toko (58mm / 38 Kolom Hemat Kertas)
+ * Generate Byte-array ESC/POS untuk Laporan EOD Tutup Toko (58mm / 32 Kolom)
  */
-export function generateEscPosEodBytes(data: LaporanEodDataForPrint, width: number = 38): Uint8Array {
+export function generateEscPosEodBytes(data: LaporanEodDataForPrint, width: 32 | 48 = 32): Uint8Array {
   const b = new EscPosBuilder();
 
-  // 1. LOGO RESMI KEBAB YASMIN
-  b.printLogo();
-
-  // 2. HEADER LAPORAN
+  // 1. HEADER LAPORAN
   b.alignCenter();
   b.bold(true);
+  b.fontSize('double');
+  b.line('KEBAB YASMIN');
+  b.fontSize('normal');
   b.line(data.cabang_nama.toUpperCase());
   b.line('LAPORAN REKAP TUTUP TOKO (EOD)');
   b.bold(false);
   b.divider(width, '=');
 
-  // 3. INFO SESI
+  // 2. INFO SESI
   b.alignLeft();
   b.twoColumns('Kode Sesi', data.kode_sesi, width);
   b.twoColumns('Kasir Jaga', data.kasir_nama, width);
@@ -544,7 +387,7 @@ export function generateEscPosEodBytes(data: LaporanEodDataForPrint, width: numb
   b.twoColumns('Jam Tutup', data.waktu_tutup, width);
   b.divider(width, '=');
 
-  // 4. RINGKASAN KAS BERSIH (Highlight Utama)
+  // 3. RINGKASAN KAS BERSIH (Highlight Utama)
   b.alignCenter();
   b.bold(true);
   b.line('*** RINGKASAN KAS BERSIH ***');
@@ -558,7 +401,7 @@ export function generateEscPosEodBytes(data: LaporanEodDataForPrint, width: numb
   b.bold(false);
   b.divider(width, '=');
 
-  // 5. REKAP PENJUALAN (Group Order & Pembayaran)
+  // 4. REKAP PENJUALAN (Group Order & Pembayaran)
   b.bold(true);
   b.line('REKAP PENJUALAN KASIR');
   b.bold(false);
@@ -572,7 +415,7 @@ export function generateEscPosEodBytes(data: LaporanEodDataForPrint, width: numb
   }
   b.divider(width, '-');
 
-  // 6. DETAIL PRODUK TERJUAL
+  // 5. DETAIL PRODUK TERJUAL
   b.bold(true);
   b.line('DETAIL PRODUK TERJUAL');
   b.bold(false);
@@ -586,7 +429,7 @@ export function generateEscPosEodBytes(data: LaporanEodDataForPrint, width: numb
   }
   b.divider(width, '-');
 
-  // 7. PENGELUARAN KEBUTUHAN
+  // 6. PENGELUARAN KEBUTUHAN
   b.bold(true);
   b.line('RINCIAN PENGELUARAN');
   b.bold(false);
@@ -599,7 +442,7 @@ export function generateEscPosEodBytes(data: LaporanEodDataForPrint, width: numb
   }
   b.divider(width, '-');
 
-  // 8. STOK FISIK BARANG BAWAAN
+  // 7. STOK FISIK BARANG BAWAAN
   b.bold(true);
   b.line('STOK FISIK BARANG BAWAAN');
   b.bold(false);
@@ -614,7 +457,7 @@ export function generateEscPosEodBytes(data: LaporanEodDataForPrint, width: numb
   }
   b.divider(width, '=');
 
-  // 9. CATATAN KEBUTUHAN
+  // 8. CATATAN KEBUTUHAN
   if (data.ket_kebutuhan) {
     b.bold(true);
     b.line('CATATAN KEBUTUHAN SHIFT:');
@@ -623,18 +466,18 @@ export function generateEscPosEodBytes(data: LaporanEodDataForPrint, width: numb
     b.divider(width, '-');
   }
 
-  // 10. KOLOM TANDA TANGAN
+  // 9. KOLOM TANDA TANGAN
   b.feed(1);
   b.twoColumns('Kasir Jaga,', 'Supervisor,', width);
-  b.feed(2);
+  b.feed(3);
   b.twoColumns('(...............)', '(...............)', width);
   b.feed(1);
   b.alignCenter();
   b.line('*** TERIMA KASIH ***');
   b.line('KEBAB YASMIN INDONESIA');
 
-  // 11. FEED & CUT (Minimal feed agar hemat kertas)
-  b.feed(2);
+  // 10. FEED & CUT
+  b.feed(4);
   b.cut();
 
   return b.getBytes();
