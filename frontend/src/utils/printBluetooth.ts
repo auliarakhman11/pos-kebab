@@ -428,7 +428,7 @@ const PRINTER_SERVICES = [
 /**
  * Kirim buffer ke Bluetooth Device secara bertahap (Chunking) untuk mencegah packet drop
  */
-async function sendBytesChunked(characteristic: any, bytes: Uint8Array, chunkSize: number = 256): Promise<void> {
+async function sendBytesChunked(characteristic: any, bytes: Uint8Array, chunkSize: number = 64): Promise<void> {
   let offset = 0;
   while (offset < bytes.length) {
     const chunk = bytes.slice(offset, offset + chunkSize);
@@ -439,7 +439,7 @@ async function sendBytesChunked(characteristic: any, bytes: Uint8Array, chunkSiz
     }
     offset += chunkSize;
     // Delay 30ms antar chunk agar buffer printer tidak overflow
-    await new Promise((resolve) => setTimeout(resolve, 30));
+    await new Promise((resolve) => setTimeout(resolve, 50));
   }
 }
 
