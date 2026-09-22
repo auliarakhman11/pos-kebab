@@ -83,7 +83,7 @@ export function getZonaWaktu(timeZone?: string | null) {
 }
 
 /**
- * Format tanggal & waktu struk sesuai zona waktu kasir (Contoh: "15 Sep 2026 01:47")
+ * Format tanggal & waktu struk sesuai zona waktu kasir (Contoh: "22/09/2026 01:47")
  */
 export function formatReceiptDate(d: Date = new Date(), timeZone?: string | null): string {
   const tz = (timeZone && (timeZone.toLowerCase().includes('jakarta') || timeZone.toLowerCase().includes('wib')))
@@ -93,8 +93,8 @@ export function formatReceiptDate(d: Date = new Date(), timeZone?: string | null
   const formatter = new Intl.DateTimeFormat('en-US', {
     timeZone: tz,
     year: 'numeric',
-    month: 'numeric',
-    day: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
     hour: '2-digit',
     minute: '2-digit',
     hour12: false,
@@ -106,14 +106,8 @@ export function formatReceiptDate(d: Date = new Date(), timeZone?: string | null
     map[p.type] = p.value;
   }
 
-  const monthNames = [
-    'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun',
-    'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'
-  ];
-  const mIndex = Math.max(0, parseInt(map.month, 10) - 1);
-  const bln = monthNames[mIndex] || 'Jan';
   let hour = map.hour === '24' ? '00' : map.hour;
 
-  return `${map.day} ${bln} ${map.year} ${hour}:${map.minute}`;
+  return `${map.day}/${map.month}/${map.year} ${hour}:${map.minute}`;
 }
 

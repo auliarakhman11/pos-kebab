@@ -262,9 +262,75 @@ export class EscPosBuilder {
 }
 
 /**
- * Format tanggal dan waktu menjadi "15 Sep 2026 01:47"
+ * Format tanggal dan waktu menjadi "DD/MM/YYYY HH:mm" (misal: 22/09/2026 15:38)
  */
-export function formatReceiptDateTime(date: Date = new Date()): string {
+export function formatReceiptDateTime(input?: Date | string | null): string {
+  if (!input) {
+    return formatDateObject(new Date());
+  }
+
+  if (input instanceof Date) {
+    return formatDateObject(input);
+  }
+
+  if (typeof input === 'string') {
+    const trimmed = input.trim();
+    if (!trimmed) return formatDateObject(new Date());
+
+    // Format DD/MM/YYYY HH:mm yang sudah sesuai
+    const alreadyFormatted = trimmed.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{2})$/);
+    if (alreadyFormatted) {
+      const d = alreadyFormatted[1].padStart(2, '0');
+      const m = alreadyFormatted[2].padStart(2, '0');
+      const y = alreadyFormatted[3];
+      const h = alreadyFormatted[4].padStart(2, '0');
+      const min = alreadyFormatted[5];
+      return `${d}/${m}/${y} ${h}:${min}`;
+    }
+
+    // Format hanya jam seperti "15.38", "15:38", "08.45"
+    const timeOnlyMatch = trimmed.match(/^(\d{1,2})[:.](\d{2})(?:[:.]\d{2})?$/);
+    if (timeOnlyMatch) {
+      const now = new Date();
+      const d = String(now.getDate()).padStart(2, '0');
+      const m = String(now.getMonth() + 1).padStart(2, '0');
+      const y = now.getFullYear();
+      const h = timeOnlyMatch[1].padStart(2, '0');
+      const min = timeOnlyMatch[2];
+      return `${d}/${m}/${y} ${h}:${min}`;
+    }
+
+    // Format dengan nama bulan (misal "15 Sep 2026 01:47" atau "22 September 2026 15:38")
+    const indoMonths: Record<string, string> = {
+      jan: '01', feb: '02', mar: '03', apr: '04', mei: '05', jun: '06',
+      jul: '07', agu: '08', ags: '08', sep: '09', okt: '10', nov: '11', des: '12',
+      januari: '01', februari: '02', maret: '03', april: '04', juni: '06',
+      juli: '07', agustus: '08', september: '09', oktober: '10', november: '11', desember: '12'
+    };
+    const indoMatch = trimmed.match(/^(\d{1,2})\s+([a-zA-Z]+)\s+(\d{4})(?:\s+(\d{1,2})[:.](\d{2}))?$/);
+    if (indoMatch) {
+      const d = indoMatch[1].padStart(2, '0');
+      const monthKey = indoMatch[2].toLowerCase();
+      const m = indoMonths[monthKey] || '01';
+      const y = indoMatch[3];
+      const h = (indoMatch[4] || '00').padStart(2, '0');
+      const min = indoMatch[5] || '00';
+      return `${d}/${m}/${y} ${h}:${min}`;
+    }
+
+    // Format ISO / tanggal umum (misal "2026-09-22T04:11:00.000Z", "2026-09-22 15:38:00")
+    const parsed = new Date(trimmed);
+    if (!isNaN(parsed.getTime())) {
+      return formatDateObject(parsed);
+    }
+
+    return trimmed;
+  }
+
+  return formatDateObject(new Date());
+}
+
+function formatDateObject(date: Date): string {
   const day = String(date.getDate()).padStart(2, '0');
   const month = String(date.getMonth() + 1).padStart(2, '0');
   const year = date.getFullYear();
@@ -284,8 +350,8 @@ export function generateEscPosReceiptBytes(data: ReceiptDataForPrint, width: num
     : `Cabang ${data.cabang_nama}`;
 
   const telepon = data.cabang_telepon || '0813-4103-733';
-  const waktuTransaksi = data.waktu_transaksi || formatReceiptDateTime();
-  const waktuCetak = data.waktu_cetak || formatReceiptDateTime();
+  const waktuTransaksi = formatReceiptDateTime(data.waktu_transaksi);
+  const waktuCetak = formatReceiptDateTime(data.waktu_cetak);
   const kasirNama = data.kasir_nama || 'Kasir';
   const pelangganNama = data.nm_costumer || '';
   const jenisOrder = data.jenis_order || 'Normal';
@@ -362,7 +428,7 @@ export function generateEscPosReceiptBytes(data: ReceiptDataForPrint, width: num
   b.bold(true);
   b.line('*** TERBAYAR ***');
   b.bold(false);
-  b.line(`<------- ${waktuCetak} ------->`);
+  b.line(`<---- ${waktuCetak} ---->`);
   b.line();
 
   // 8. JEDA KERTAS / TIKET NOMOR ANTRIAN KHUSUS

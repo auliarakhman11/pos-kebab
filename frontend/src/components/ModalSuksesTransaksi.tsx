@@ -16,7 +16,11 @@ import {
   User,
   ExternalLink,
 } from 'lucide-react';
-import { printReceiptBluetooth, ReceiptDataForPrint } from '../utils/printBluetooth';
+import {
+  printReceiptBluetooth,
+  formatReceiptDateTime,
+  ReceiptDataForPrint,
+} from '../utils/printBluetooth';
 
 export interface ModalSuksesTransaksiProps {
   isOpen: boolean;
@@ -73,8 +77,8 @@ export default function ModalSuksesTransaksi({
         urutan: data.urutan,
         cabang_nama: data.cabang_nama,
         cabang_telepon: data.cabang_telepon || '0813-4103-733',
-        waktu_transaksi: data.waktu_transaksi,
-        waktu_cetak: data.waktu_cetak,
+        waktu_transaksi: formatReceiptDateTime(data.waktu_transaksi),
+        waktu_cetak: formatReceiptDateTime(data.waktu_cetak),
         kasir_nama: data.kasir_nama,
         nm_costumer: data.nm_costumer || '-',
         jenis_order: data.jenis_order || 'Normal',
@@ -158,18 +162,38 @@ export default function ModalSuksesTransaksi({
           </div>
 
           {/* SIMULASI STRUK KERTAS THERMAL */}
-          <div className="rounded-2xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 p-4 font-mono text-xs space-y-2 text-slate-700 dark:text-slate-200 shadow-inner">
-            {/* Header Nota */}
-            <div className="text-center pb-2 border-b border-dashed border-slate-300 dark:border-slate-600">
-              <p className="font-black text-sm text-slate-900 dark:text-white uppercase">
+          <div className="rounded-2xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 p-3.5 font-mono text-[11px] space-y-1.5 text-slate-700 dark:text-slate-200 shadow-inner">
+            {/* Header Nota dengan Logo Resmi Kebab Yasmin */}
+            <div className="text-center pb-2 border-b border-dashed border-slate-300 dark:border-slate-600 flex flex-col items-center">
+              <div className="mb-1.5 w-32 py-1 px-2 rounded-lg bg-white/70 dark:bg-slate-900/70 border border-slate-200/60 dark:border-slate-700/60 shadow-xs flex items-center justify-center">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="/logo-yasmin.png"
+                  alt="Logo Kebab Yasmin"
+                  className="w-full h-auto max-h-12 object-contain dark:hidden"
+                />
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="/logo-yasmin-dark.png"
+                  alt="Logo Kebab Yasmin"
+                  className="w-full h-auto max-h-12 object-contain hidden dark:block"
+                />
+              </div>
+              <p className="font-black text-xs text-slate-900 dark:text-white uppercase tracking-wide">
                 {formattedCabang}
               </p>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400">Surganya Ngebab!</p>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400">{data.cabang_telepon || '0813-4103-733'}</p>
+              <p className="text-[10px] text-slate-500 dark:text-slate-400">Surganya Ngebab!</p>
+              <p className="text-[10px] text-slate-500 dark:text-slate-400">{data.cabang_telepon || '0813-4103-733'}</p>
             </div>
 
             {/* Info Transaksi */}
-            <div className="text-[11px] space-y-0.5 py-1">
+            <div className="text-[10px] space-y-0.5 py-0.5">
+              {data.no_invoice && (
+                <div className="flex justify-between">
+                  <span className="text-slate-400 dark:text-slate-500">No. Inv:</span>
+                  <span className="font-mono font-bold text-slate-900 dark:text-white">{data.no_invoice}</span>
+                </div>
+              )}
               <div className="flex justify-between">
                 <span className="text-slate-400 dark:text-slate-500">Waktu:</span>
                 <span>{data.waktu_transaksi}</span>
@@ -190,7 +214,7 @@ export default function ModalSuksesTransaksi({
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-400 dark:text-slate-500">Antrian:</span>
-                <span className="font-bold text-slate-900 dark:text-white">{data.urutan}</span>
+                <span className="font-bold text-slate-900 dark:text-white">#{data.urutan}</span>
               </div>
             </div>
 
@@ -198,7 +222,7 @@ export default function ModalSuksesTransaksi({
             <div className="border-t border-dashed border-slate-300 dark:border-slate-600 my-1" />
 
             {/* List Produk */}
-            <div className="space-y-1.5 py-1">
+            <div className="space-y-1 py-0.5 text-[10px]">
               {data.items.map((item, idx) => (
                 <div key={idx} className="space-y-0.5">
                   <div className="flex justify-between font-medium">
@@ -210,12 +234,12 @@ export default function ModalSuksesTransaksi({
                     </span>
                   </div>
                   {item.varian_str && (
-                    <p className="text-[10px] text-amber-700 dark:text-amber-400 pl-4">
-                      {item.varian_str}
+                    <p className="text-[9px] text-amber-700 dark:text-amber-400 pl-3">
+                      + {item.varian_str}
                     </p>
                   )}
                   {item.catatan && (
-                    <p className="text-[10px] text-slate-500 dark:text-slate-400 italic pl-4">
+                    <p className="text-[9px] text-slate-500 dark:text-slate-400 italic pl-3">
                       &ldquo;{item.catatan}&rdquo;
                     </p>
                   )}
@@ -227,9 +251,9 @@ export default function ModalSuksesTransaksi({
             <div className="border-t border-dashed border-slate-300 dark:border-slate-600 my-1" />
 
             {/* Total Pembayaran */}
-            <div className="space-y-1 pt-1">
+            <div className="space-y-0.5 pt-0.5 text-[10px]">
               <div className="flex justify-between">
-                <span className="text-slate-400 dark:text-slate-500">Subtotal:</span>
+                <span className="text-slate-400 dark:text-slate-500">Subtotal ({data.items.reduce((s, i) => s + i.qty, 0)} item):</span>
                 <span>Rp {data.subtotal.toLocaleString('id-ID')}</span>
               </div>
               {data.diskon && data.diskon > 0 ? (
@@ -238,26 +262,26 @@ export default function ModalSuksesTransaksi({
                   <span>-Rp {data.diskon.toLocaleString('id-ID')}</span>
                 </div>
               ) : null}
-              <div className="flex justify-between text-sm font-black text-slate-900 dark:text-white pt-1 border-t border-slate-200 dark:border-slate-700">
+              <div className="flex justify-between text-xs font-black text-slate-900 dark:text-white pt-1 border-t border-slate-200 dark:border-slate-700">
                 <span>Total Pembayaran:</span>
-                <span className="text-emerald-600 dark:text-emerald-400">
+                <span className="text-emerald-600 dark:text-emerald-400 font-mono">
                   Rp {data.total_bayar.toLocaleString('id-ID')}
                 </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-400 dark:text-slate-500">Dibayar:</span>
-                <span>Rp {data.dibayar.toLocaleString('id-ID')}</span>
+                <span className="font-mono">Rp {data.dibayar.toLocaleString('id-ID')}</span>
               </div>
               <div className="flex justify-between font-bold text-emerald-600 dark:text-emerald-400">
                 <span>Kembalian:</span>
-                <span>Rp {data.kembalian.toLocaleString('id-ID')}</span>
+                <span className="font-mono">Rp {data.kembalian.toLocaleString('id-ID')}</span>
               </div>
             </div>
 
             {/* Footer Nota */}
-            <div className="text-center pt-2 border-t border-dashed border-slate-300 dark:border-slate-600 text-[10px] text-slate-400 dark:text-slate-500">
-              <p>Instagram: kebabyasmin.id | Youtube: kebabyasmin</p>
-              <p className="font-bold text-slate-700 dark:text-slate-300 mt-0.5">*** TERBAYAR ***</p>
+            <div className="text-center pt-1.5 border-t border-dashed border-slate-300 dark:border-slate-600 text-[9px] text-slate-400 dark:text-slate-500">
+              <p>Instagram: @kebabyasmin.id | Youtube: kebabyasmin</p>
+              <p className="font-bold text-slate-700 dark:text-slate-300 mt-0.5">*** LUNAS / TERBAYAR ***</p>
             </div>
           </div>
 

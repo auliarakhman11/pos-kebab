@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import {
   printReceiptBluetooth,
+  formatReceiptDateTime,
   ReceiptDataForPrint,
 } from '@/utils/printBluetooth';
 
@@ -202,16 +203,8 @@ export default function ModalDaftarTransaksi({
         urutan: tx.urutan,
         cabang_nama: cabang?.nama || cabangNama || 'Cabang Kebab Yasmin',
         cabang_telepon: (cabang as any)?.telepon || undefined,
-        waktu_transaksi: tx.created_at
-          ? new Date(tx.created_at).toLocaleTimeString('id-ID', {
-              hour: '2-digit',
-              minute: '2-digit',
-            })
-          : tx.tgl,
-        waktu_cetak: new Date().toLocaleTimeString('id-ID', {
-          hour: '2-digit',
-          minute: '2-digit',
-        }),
+        waktu_transaksi: formatReceiptDateTime(tx.created_at || tx.tgl),
+        waktu_cetak: formatReceiptDateTime(),
         kasir_nama: tx.nm_kasir || user?.name || 'Kasir',
         nm_costumer: tx.nm_costumer || undefined,
         jenis_order: tx.delivery_nama,

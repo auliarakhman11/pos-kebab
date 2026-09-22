@@ -42,7 +42,7 @@ import useAuthStore from '@/store/authStore';
 import useCartStore, { SelectedVarian } from '@/store/cartStore';
 import { useTheme } from '@/lib/theme';
 import { db } from '@/lib/db';
-import { printReceiptBluetooth } from '@/utils/printBluetooth';
+import { printReceiptBluetooth, formatReceiptDateTime } from '@/utils/printBluetooth';
 import ModalSuksesTransaksi from '@/components/ModalSuksesTransaksi';
 import ModalGantiShift from '@/components/ModalGantiShift';
 import ModalBarangKebutuhan from '@/components/ModalBarangKebutuhan';
@@ -480,19 +480,15 @@ export default function KasirPOSPage() {
         // 2. Siapkan data struk offline
         const deliveryItem = deliveries.find((d) => d.id === delivery_id);
         const pembayaranItem = pembayarans.find((p) => p.id === selectedPembayaranId);
-        const offlineTimestamp = new Date();
-        const timeFormatted = offlineTimestamp.toLocaleTimeString('id-ID', {
-          hour: '2-digit',
-          minute: '2-digit',
-        });
+        const formattedOfflineTime = formatReceiptDateTime(new Date());
 
         const offlineReceiptData = {
           no_invoice: `OFF-${Date.now().toString().slice(-6)}`,
           urutan: 0,
           cabang_nama: cabang?.nama || 'Cabang Kebab Yasmin',
           cabang_telepon: (cabang as any)?.telepon || undefined,
-          waktu_transaksi: timeFormatted,
-          waktu_cetak: timeFormatted,
+          waktu_transaksi: formattedOfflineTime,
+          waktu_cetak: formattedOfflineTime,
           kasir_nama: user?.name || 'Kasir',
           nm_costumer: customerName.trim() || undefined,
           no_tlp: customerPhone.trim() || undefined,
