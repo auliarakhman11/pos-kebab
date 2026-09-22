@@ -265,13 +265,12 @@ export class EscPosBuilder {
  * Format tanggal dan waktu menjadi "15 Sep 2026 01:47"
  */
 export function formatReceiptDateTime(date: Date = new Date()): string {
-  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
-  const day = date.getDate();
-  const month = months[date.getMonth()];
+  const day = String(date.getDate()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, '0');
   const year = date.getFullYear();
   const hours = String(date.getHours()).padStart(2, '0');
   const minutes = String(date.getMinutes()).padStart(2, '0');
-  return `${day} ${month} ${year} ${hours}:${minutes}`;
+  return `${day}/${month}/${year} ${hours}:${minutes}`;
 }
 
 /**

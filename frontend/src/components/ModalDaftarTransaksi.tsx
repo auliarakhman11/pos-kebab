@@ -201,6 +201,7 @@ export default function ModalDaftarTransaksi({
         no_invoice: tx.no_invoice,
         urutan: tx.urutan,
         cabang_nama: cabang?.nama || cabangNama || 'Cabang Kebab Yasmin',
+        cabang_telepon: (cabang as any)?.telepon || undefined,
         waktu_transaksi: tx.created_at
           ? new Date(tx.created_at).toLocaleTimeString('id-ID', {
               hour: '2-digit',
@@ -524,10 +525,15 @@ export default function ModalDaftarTransaksi({
                 filteredList.map((tx) => {
                   const isVoid = tx.void === 1;
                   const timeFormatted = tx.created_at
-                    ? new Date(tx.created_at).toLocaleTimeString('id-ID', {
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      })
+                    ? (() => {
+                        const d = new Date(tx.created_at);
+                        const day = String(d.getDate()).padStart(2, '0');
+                        const month = String(d.getMonth() + 1).padStart(2, '0');
+                        const year = d.getFullYear();
+                        const hours = String(d.getHours()).padStart(2, '0');
+                        const minutes = String(d.getMinutes()).padStart(2, '0');
+                        return `${day}/${month}/${year} ${hours}:${minutes}`;
+                      })()
                     : '-';
 
                   return (
@@ -706,13 +712,29 @@ export default function ModalDaftarTransaksi({
         <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in">
           <div className="relative w-full max-w-lg bg-white dark:bg-slate-900 rounded-3xl p-6 border border-slate-200 dark:border-slate-800 shadow-2xl space-y-4 max-h-[85vh] flex flex-col">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
-              <div>
-                <span className="text-[10px] font-mono text-amber-600 font-bold uppercase tracking-wider">
-                  Rincian Transaksi #{selectedTxForDetail.no_invoice}
-                </span>
-                <h3 className="text-base font-black text-slate-900 dark:text-white">
-                  {selectedTxForDetail.nm_costumer || 'Pelanggan Umum'} &bull; #{selectedTxForDetail.urutan}
-                </h3>
+              <div className="flex items-center gap-3">
+                <div className="w-11 h-11 rounded-xl bg-amber-50 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-800/60 p-1 flex items-center justify-center shrink-0 shadow-xs">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src="/logo-yasmin.png"
+                    alt="Logo Kebab Yasmin"
+                    className="w-full h-auto max-h-9 object-contain dark:hidden"
+                  />
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src="/logo-yasmin-dark.png"
+                    alt="Logo Kebab Yasmin"
+                    className="w-full h-auto max-h-9 object-contain hidden dark:block"
+                  />
+                </div>
+                <div>
+                  <span className="text-[10px] font-mono text-amber-600 font-bold uppercase tracking-wider">
+                    Rincian Transaksi #{selectedTxForDetail.no_invoice}
+                  </span>
+                  <h3 className="text-base font-black text-slate-900 dark:text-white">
+                    {selectedTxForDetail.nm_costumer || 'Pelanggan Umum'} &bull; #{selectedTxForDetail.urutan}
+                  </h3>
+                </div>
               </div>
               <button
                 type="button"
