@@ -118,28 +118,7 @@ export const KEBAB_YASMIN_LOGO_RASTER_B64 =
   'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA' +
   'AAAAAAAAAAAAAAAAAAAAAA=';
 
-let cachedLogoRasterBytes: Uint8Array | null = null;
 
-export function getLogoRasterBytes(): Uint8Array {
-  if (cachedLogoRasterBytes) return cachedLogoRasterBytes;
-  try {
-    if (typeof atob === 'function') {
-      const bin = atob(KEBAB_YASMIN_LOGO_RASTER_B64);
-      const bytes = new Uint8Array(bin.length);
-      for (let i = 0; i < bin.length; i++) {
-        bytes[i] = bin.charCodeAt(i);
-      }
-      cachedLogoRasterBytes = bytes;
-      return bytes;
-    } else if (typeof Buffer !== 'undefined') {
-      cachedLogoRasterBytes = new Uint8Array(Buffer.from(KEBAB_YASMIN_LOGO_RASTER_B64, 'base64'));
-      return cachedLogoRasterBytes;
-    }
-  } catch (err) {
-    console.warn('Gagal decode ESC/POS logo:', err);
-  }
-  return new Uint8Array(0);
-}
 
 // Byte Command ESC/POS Standard
 export const ESC_COMMANDS = {
@@ -221,14 +200,12 @@ export class EscPosBuilder {
   }
 
   printLogo(): this {
-    const logoBytes = getLogoRasterBytes();
-    if (logoBytes.length > 0) {
-      this.alignCenter();
-      for (let i = 0; i < logoBytes.length; i++) {
-        this.buffer.push(logoBytes[i]);
-      }
-      this.line();
-    }
+    this.alignCenter();
+    this.bold(true);
+    this.fontSize('double');
+    this.line('YASMIN KEBAB');
+    this.fontSize('normal');
+    this.bold(false);
     return this;
   }
 
@@ -268,7 +245,7 @@ export class EscPosBuilder {
       const maxLeftWidth = width - right.length - 1;
       this.line(left.substring(0, maxLeftWidth) + ' ' + right);
       if (left.length > maxLeftWidth) {
-        this.line('  ' + left.substring(maxLeftWidth));
+        this.line('    ' + left.substring(maxLeftWidth));
       }
     }
     return this;
