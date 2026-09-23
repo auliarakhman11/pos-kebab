@@ -519,7 +519,7 @@ export default function ModalDaftarTransaksi({
                   const isVoid = tx.void === 1;
                   const timeFormatted = tx.created_at
                     ? (() => {
-                        const d = new Date(tx.created_at);
+                        const d = new Date(tx.created_at.replace(/Z$/i, ''));
                         const day = String(d.getDate()).padStart(2, '0');
                         const month = String(d.getMonth() + 1).padStart(2, '0');
                         const year = d.getFullYear();

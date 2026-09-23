@@ -196,7 +196,7 @@ export default function ModalSuksesTransaksi({
               )}
               <div className="flex justify-between">
                 <span className="text-slate-400 dark:text-slate-500">Waktu:</span>
-                <span>{data.waktu_transaksi}</span>
+                <span>{formatReceiptDateTime(data.waktu_transaksi)}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-400 dark:text-slate-500">Kasir:</span>

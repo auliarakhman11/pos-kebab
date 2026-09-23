@@ -319,7 +319,7 @@ export function formatReceiptDateTime(input?: Date | string | null): string {
     }
 
     // Format ISO / tanggal umum (misal "2026-09-22T04:11:00.000Z", "2026-09-22 15:38:00")
-    const parsed = new Date(trimmed);
+    const parsed = new Date(trimmed.replace(/Z$/i, ''));
     if (!isNaN(parsed.getTime())) {
       return formatDateObject(parsed);
     }
