@@ -31,9 +31,9 @@ import {
 import api from '@/lib/api';
 import useAuthStore from '@/store/authStore';
 import { useTheme } from '@/lib/theme';
-import {
   printLaporanEodBluetooth,
   LaporanEodDataForPrint,
+  requestBluetoothDevice,
 } from '@/utils/printBluetooth';
 
 // Helper Utility: Konversi File Gambar ke Base64 String
@@ -295,6 +295,7 @@ export default function BukaTokoPage() {
     setErrorMsg(null);
     setSuccessMsg(null);
     try {
+      const device = await requestBluetoothDevice();
       const token = Cookies.get('pos_access_token');
       const res = await api.get('/rekap-toko/sebelumnya', {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
@@ -354,7 +355,7 @@ export default function BukaTokoPage() {
         ket_kebutuhan: d.info_toko?.ket_kebutuhan || undefined,
       };
 
-      await printLaporanEodBluetooth(eodPayload);
+      await printLaporanEodBluetooth(eodPayload, device);
       setSuccessMsg(
         'Laporan Tutup Toko Sebelumnya berhasil dicetak ke printer thermal Bluetooth!'
       );
