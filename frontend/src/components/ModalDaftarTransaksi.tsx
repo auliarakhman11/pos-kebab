@@ -153,7 +153,7 @@ export default function ModalDaftarTransaksi({
     return transaksiList.filter((tx) => {
       // Filter Status
       if (statusFilter === 'valid' && tx.void !== 0) return false;
-      if (statusFilter === 'void' && tx.void !== 1) return false;
+      if (statusFilter === 'void' && tx.void === 0) return false;
 
       // Filter Search
       if (searchQuery.trim()) {
@@ -516,7 +516,7 @@ export default function ModalDaftarTransaksi({
                 </tr>
               ) : (
                 filteredList.map((tx) => {
-                  const isVoid = tx.void === 1;
+                  const isVoid = tx.void !== 0;
                   const timeFormatted = tx.created_at
                     ? (() => {
                         const d = new Date(tx.created_at.replace(/Z$/i, ''));

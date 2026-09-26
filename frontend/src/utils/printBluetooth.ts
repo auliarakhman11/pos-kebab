@@ -131,6 +131,7 @@ export const ESC_COMMANDS = {
   UNDERLINE_ON: [0x1b, 0x2d, 0x01],
   UNDERLINE_OFF: [0x1b, 0x2d, 0x00],
   FONT_NORMAL: [0x1d, 0x21, 0x00],
+  FONT_B_SMALL: [0x1b, 0x4d, 0x01],
   FONT_DOUBLE_SIZE: [0x1d, 0x21, 0x11], // 2x Lebar & 2x Tinggi
   FONT_LARGE: [0x1d, 0x21, 0x22], // 3x
   FONT_HUGE: [0x1d, 0x21, 0x33], // 4x Font untuk Nomor Antrian
@@ -181,8 +182,11 @@ export class EscPosBuilder {
     return this;
   }
 
-  fontSize(type: 'normal' | 'double' | 'large' | 'huge'): this {
+  fontSize(type: 'normal' | 'small' | 'double' | 'large' | 'huge'): this {
     switch (type) {
+      case 'small':
+        this.buffer.push(...ESC_COMMANDS.FONT_B_SMALL);
+        break;
       case 'double':
         this.buffer.push(...ESC_COMMANDS.FONT_DOUBLE_SIZE);
         break;
@@ -199,14 +203,83 @@ export class EscPosBuilder {
     return this;
   }
 
-  printLogo(): this {
-    this.alignCenter();
-    this.bold(true);
-    this.fontSize('double');
-    this.line('YASMIN KEBAB');
-    this.fontSize('normal');
-    this.bold(false);
+  async printLogo(): Promise<this> {
+    try {
+      await this.printImage('/logo.png', 256);
+    } catch (e) {
+      this.alignCenter();
+      this.bold(true);
+      this.fontSize('double');
+      this.line('YASMIN KEBAB');
+      this.fontSize('normal');
+      this.bold(false);
+    }
     return this;
+  }
+
+  async printImage(url: string, maxWidth: number = 384): Promise<this> {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.crossOrigin = 'Anonymous';
+      img.onload = () => {
+        try {
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+          if (width > maxWidth) {
+            height = Math.round((height * maxWidth) / width);
+            width = maxWidth;
+          }
+          width = Math.ceil(width / 8) * 8; 
+  
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) return resolve(this);
+  
+          ctx.fillStyle = 'white';
+          ctx.fillRect(0, 0, width, height);
+          ctx.drawImage(img, 0, 0, width, height);
+  
+          const imgData = ctx.getImageData(0, 0, width, height);
+          const pixels = imgData.data;
+  
+          this.alignCenter();
+  
+          const xL = (width / 8) % 256;
+          const xH = Math.floor(width / 8 / 256);
+          const yL = height % 256;
+          const yH = Math.floor(height / 256);
+  
+          this.buffer.push(0x1d, 0x76, 0x30, 0x00, xL, xH, yL, yH);
+  
+          for (let y = 0; y < height; y++) {
+            for (let x = 0; x < width; x += 8) {
+              let byte = 0;
+              for (let b = 0; b < 8; b++) {
+                if (x + b < width) {
+                  const idx = (y * width + (x + b)) * 4;
+                  const r = pixels[idx];
+                  const g = pixels[idx + 1];
+                  const b_color = pixels[idx + 2];
+                  const a = pixels[idx + 3];
+                  const luminance = 0.299 * r + 0.587 * g + 0.114 * b_color;
+                  if (a > 128 && luminance < 128) {
+                    byte |= (1 << (7 - b));
+                  }
+                }
+              }
+              this.buffer.push(byte);
+            }
+          }
+          resolve(this);
+        } catch (err) {
+          resolve(this);
+        }
+      };
+      img.onerror = () => reject(new Error('Gagal memuat gambar logo'));
+      img.src = url;
+    });
   }
 
   text(str: string): this {
@@ -342,7 +415,7 @@ function formatDateObject(date: Date): string {
 /**
  * Generate Byte Array ESC/POS lengkap sesuai format struk resmi Kebab Yasmin
  */
-export function generateEscPosReceiptBytes(data: ReceiptDataForPrint, width: number = 32): Uint8Array {
+export async function generateEscPosReceiptBytes(data: ReceiptDataForPrint, width: number = 32): Promise<Uint8Array> {
   const b = new EscPosBuilder();
 
   const formattedCabang = data.cabang_nama?.toLowerCase().startsWith('cabang')
@@ -357,7 +430,7 @@ export function generateEscPosReceiptBytes(data: ReceiptDataForPrint, width: num
   const jenisOrder = data.jenis_order || 'Normal';
 
   // 1. HEADER STRUK (Rata Tengah)
-  b.printLogo();
+  await b.printLogo();
   b.alignCenter();
   b.bold(true);
   b.line(formattedCabang);
@@ -533,10 +606,14 @@ export interface LaporanEodDataForPrint {
 /**
  * Generate Byte-array ESC/POS untuk Laporan EOD Tutup Toko (58mm / 32 Kolom)
  */
-export function generateEscPosEodBytes(data: LaporanEodDataForPrint, width: 32 | 48 = 32): Uint8Array {
+export async function generateEscPosEodBytes(data: LaporanEodDataForPrint, width: number = 42): Promise<Uint8Array> {
   const b = new EscPosBuilder();
 
+  b.init();
+  b.fontSize('small');
+
   // 1. HEADER LAPORAN
+  await b.printLogo();
   b.alignCenter();
   b.bold(true);
   b.fontSize('double');
@@ -652,9 +729,9 @@ export function generateEscPosEodBytes(data: LaporanEodDataForPrint, width: 32 |
 }
 
 /**
- * Kirim raw byte array ke Bluetooth Device
+ * Fungsi untuk meminta device dan mencegah user gesture timeout.
  */
-async function sendRawBytesBluetooth(rawBytes: Uint8Array): Promise<void> {
+async function requestBluetoothDevice(): Promise<any> {
   const nav = typeof navigator !== 'undefined' ? (navigator as any) : null;
   if (!nav || !nav.bluetooth) {
     throw new Error(
@@ -682,7 +759,18 @@ async function sendRawBytesBluetooth(rawBytes: Uint8Array): Promise<void> {
     }
   }
 
-  if (!device || !device.gatt) {
+  if (!device) {
+    throw new Error('Perangkat printer tidak valid.');
+  }
+
+  return device;
+}
+
+/**
+ * Mengirim data ke perangkat yang sudah di-request
+ */
+async function sendRawBytesToDevice(device: any, rawBytes: Uint8Array): Promise<void> {
+  if (!device.gatt) {
     throw new Error('Perangkat printer tidak valid.');
   }
 
@@ -741,8 +829,9 @@ async function sendRawBytesBluetooth(rawBytes: Uint8Array): Promise<void> {
  * Fungsi Utama: Cetak Struk Transaksi via Web Bluetooth API (navigator.bluetooth)
  */
 export async function printReceiptBluetooth(data: ReceiptDataForPrint): Promise<{ success: boolean; message: string }> {
-  const rawBytes = generateEscPosReceiptBytes(data);
-  await sendRawBytesBluetooth(rawBytes);
+  const device = await requestBluetoothDevice();
+  const rawBytes = await generateEscPosReceiptBytes(data);
+  await sendRawBytesToDevice(device, rawBytes);
 
   return {
     success: true,
@@ -754,8 +843,9 @@ export async function printReceiptBluetooth(data: ReceiptDataForPrint): Promise<
  * Fungsi Utama: Cetak Laporan EOD Tutup Toko via Web Bluetooth API
  */
 export async function printLaporanEodBluetooth(data: LaporanEodDataForPrint): Promise<{ success: boolean; message: string }> {
-  const rawBytes = generateEscPosEodBytes(data);
-  await sendRawBytesBluetooth(rawBytes);
+  const device = await requestBluetoothDevice();
+  const rawBytes = await generateEscPosEodBytes(data);
+  await sendRawBytesToDevice(device, rawBytes);
 
   return {
     success: true,
