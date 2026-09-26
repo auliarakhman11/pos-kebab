@@ -50,12 +50,12 @@ app.use((_req: Request, res: Response) => {
 });
 
 // Start Server
-if (process.env.NODE_ENV !== 'test' && require.main === module) {
-  app.listen(PORT, () => {
-    console.log(`🚀 Kebab Yasmin Backend API running on port ${PORT}`);
-    console.log(`📍 Health check: http://localhost:${PORT}/api/health`);
-    console.log(`🔐 Login endpoint: http://localhost:${PORT}/api/login`);
-  });
-}
+// if (process.env.NODE_ENV !== 'test' && require.main === module) {
+app.listen(PORT, () => {
+  console.log(`🚀 Kebab Yasmin Backend API running on port ${PORT}`);
+  console.log(`📍 Health check: http://localhost:${PORT}/api/health`);
+  console.log(`🔐 Login endpoint: http://localhost:${PORT}/api/login`);
+});
+// }
 
 export default app;

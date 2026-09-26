@@ -129,6 +129,16 @@ export class CheckoutService {
       },
     });
 
+    // Ambil harga normal (delivery_id = 1) untuk semua produk di keranjang
+    const normalPrices = await prisma.harga.findMany({
+      where: {
+        produk_id: { in: produkIds },
+        delivery_id: 1,
+      },
+      select: { produk_id: true, harga: true },
+    });
+    const normalPriceMap = new Map(normalPrices.map((p) => [p.produk_id, p.harga]));
+
     // Ambil seluruh bahan_id unik yang ada di resep
     const uniqueBahanIds = Array.from(new Set(allRecipes.map((r) => r.bahan_id)));
 
@@ -225,7 +235,10 @@ export class CheckoutService {
           const pId = Number(item.produk_id);
           const qty = Number(item.qty) || 1;
           const harga = Number(item.harga) || 0;
-          const hargaNormal = Number(item.harga_normal) || harga;
+          
+          const dbHargaNormal = normalPriceMap.get(pId);
+          const hargaNormal = dbHargaNormal !== undefined ? dbHargaNormal : (Number(item.harga_normal) || harga);
+          
           const diskonItem = Number(item.diskon) || 0;
           const varianList = Array.isArray(item.varian) ? item.varian : [];
 
