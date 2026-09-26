@@ -731,7 +731,7 @@ export async function generateEscPosEodBytes(data: LaporanEodDataForPrint, width
 /**
  * Fungsi untuk meminta device dan mencegah user gesture timeout.
  */
-async function requestBluetoothDevice(): Promise<any> {
+export async function requestBluetoothDevice(): Promise<any> {
   const nav = typeof navigator !== 'undefined' ? (navigator as any) : null;
   if (!nav || !nav.bluetooth) {
     throw new Error(
@@ -828,8 +828,8 @@ async function sendRawBytesToDevice(device: any, rawBytes: Uint8Array): Promise<
 /**
  * Fungsi Utama: Cetak Struk Transaksi via Web Bluetooth API (navigator.bluetooth)
  */
-export async function printReceiptBluetooth(data: ReceiptDataForPrint): Promise<{ success: boolean; message: string }> {
-  const device = await requestBluetoothDevice();
+export async function printReceiptBluetooth(data: ReceiptDataForPrint, preRequestedDevice?: any): Promise<{ success: boolean; message: string }> {
+  const device = preRequestedDevice || await requestBluetoothDevice();
   const rawBytes = await generateEscPosReceiptBytes(data);
   await sendRawBytesToDevice(device, rawBytes);
 
@@ -842,8 +842,8 @@ export async function printReceiptBluetooth(data: ReceiptDataForPrint): Promise<
 /**
  * Fungsi Utama: Cetak Laporan EOD Tutup Toko via Web Bluetooth API
  */
-export async function printLaporanEodBluetooth(data: LaporanEodDataForPrint): Promise<{ success: boolean; message: string }> {
-  const device = await requestBluetoothDevice();
+export async function printLaporanEodBluetooth(data: LaporanEodDataForPrint, preRequestedDevice?: any): Promise<{ success: boolean; message: string }> {
+  const device = preRequestedDevice || await requestBluetoothDevice();
   const rawBytes = await generateEscPosEodBytes(data);
   await sendRawBytesToDevice(device, rawBytes);
 
