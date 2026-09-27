@@ -138,6 +138,8 @@ export const ESC_COMMANDS = {
   FEED_LINES: (n: number) => [0x1b, 0x64, n],
   CUT_PAPER: [0x1d, 0x56, 0x00], // Full Cut
   PARTIAL_CUT: [0x1d, 0x56, 0x01], // Partial Cut
+  LINE_SPACING: (n: number) => [0x1b, 0x33, n],
+  DEFAULT_LINE_SPACING: [0x1b, 0x32],
 };
 
 /**
@@ -199,6 +201,15 @@ export class EscPosBuilder {
       default:
         this.buffer.push(...ESC_COMMANDS.FONT_NORMAL);
         break;
+    }
+    return this;
+  }
+
+  lineSpacing(n?: number): this {
+    if (n === undefined) {
+      this.buffer.push(...ESC_COMMANDS.DEFAULT_LINE_SPACING);
+    } else {
+      this.buffer.push(...ESC_COMMANDS.LINE_SPACING(n));
     }
     return this;
   }
@@ -415,8 +426,10 @@ function formatDateObject(date: Date): string {
 /**
  * Generate Byte Array ESC/POS lengkap sesuai format struk resmi Kebab Yasmin
  */
-export async function generateEscPosReceiptBytes(data: ReceiptDataForPrint, width: number = 32): Promise<Uint8Array> {
+export async function generateEscPosReceiptBytes(data: ReceiptDataForPrint, width: number = 42): Promise<Uint8Array> {
   const b = new EscPosBuilder();
+  b.fontSize('small');
+  b.lineSpacing(20); // Jarak antar baris lebih rapat untuk font kecil
 
   const formattedCabang = data.cabang_nama?.toLowerCase().startsWith('cabang')
     ? data.cabang_nama
@@ -446,8 +459,7 @@ export async function generateEscPosReceiptBytes(data: ReceiptDataForPrint, widt
   b.line(`Costumer      : ${pelangganNama}`);
   b.line(`Jenis Order   : ${jenisOrder}`);
 
-  // Antrian di tengah
-  b.alignCenter();
+  // Antrian di metadata struk
   b.bold(true);
   b.line(`Antrian       : ${data.urutan}`);
   b.bold(false);
@@ -502,29 +514,9 @@ export async function generateEscPosReceiptBytes(data: ReceiptDataForPrint, widt
   b.line('*** TERBAYAR ***');
   b.bold(false);
   b.line(`<---- ${waktuCetak} ---->`);
-  b.line();
 
-  // 8. JEDA KERTAS / TIKET NOMOR ANTRIAN KHUSUS
-  b.feed(2);
-  b.line('+------------------------------+');
-  b.bold(true);
-  b.line('Nomor Antrian');
-  b.line(formattedCabang);
-  b.line();
-
-  // Nomor Antrian Font Ekstra Besar & Tebal
-  b.fontSize('huge');
-  b.underline(true);
-  b.line(` ${data.urutan} `);
-  b.underline(false);
-  b.fontSize('normal');
-  b.bold(false);
-
-  b.line();
-  b.line('+------------------------------+');
-
-  // 9. FEED & CUT
-  b.feed(2);
+  // 8. FEED & CUT
+  b.feed(1);
   b.cut();
 
   return b.getBytes();
@@ -611,6 +603,7 @@ export async function generateEscPosEodBytes(data: LaporanEodDataForPrint, width
 
   b.init();
   b.fontSize('small');
+  b.lineSpacing(20);
 
   // 1. HEADER LAPORAN
   await b.printLogo();
@@ -722,7 +715,7 @@ export async function generateEscPosEodBytes(data: LaporanEodDataForPrint, width
   b.line('KEBAB YASMIN INDONESIA');
 
   // 10. FEED & CUT
-  b.feed(4);
+  b.feed(1);
   b.cut();
 
   return b.getBytes();

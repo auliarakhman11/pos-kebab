@@ -96,7 +96,7 @@ Saat "Bayar" ditekan, kirim payload ke API. Gunakan `$transaction` Prisma agar e
 
 **E. Hardware Actions (Frontend)**
 *   Bersihkan keranjang.
-*   Trigger Cetak *Bluetooth Thermal Printer* Web API (Format: Logo, Waktu, Kasir, Order, Rincian, Subtotal, Kembalian, Box Antrian Khusus).
+*   Trigger Cetak *Bluetooth Thermal Printer* Web API (Format hemat kertas: Logo, Metadata Kasir & Antrian, Rincian Pesanan, Subtotal & Kembalian, Footer Tanpa Box Antrian Bawah).
 *   Kirim pesan ke WA (Direct Message API).
 
 ---
