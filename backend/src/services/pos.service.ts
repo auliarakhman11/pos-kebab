@@ -4,7 +4,7 @@ export class PosService {
   /**
    * Mengambil seluruh data awal untuk Halaman Kasir POS:
    * - Kategori produk (possition ASC, exclude '0')
-   * - Produk aktif (hapus = 0) beserta tabel harga dan resep (bahan)
+   * - Produk aktif (hapus = 0, status = 'ON') beserta tabel harga dan resep (bahan)
    * - Jenis delivery / order (event != 1, default 1: Normal)
    * - Jenis pembayaran aktif (aktif = '1')
    * - Kategori varian & varian aktif
@@ -25,6 +25,7 @@ export class PosService {
         prisma.produk.findMany({
           where: {
             hapus: 0,
+            status: 'ON',
           },
           include: {
             harga: true,
