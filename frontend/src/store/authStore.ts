@@ -92,7 +92,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     const savedUser = localStorage.getItem('pos_user');
     const savedCabang = localStorage.getItem('pos_cabang');
 
-    if (token && savedUser) {
+    if ((token || refreshToken) && savedUser) {
       try {
         set({
           user: JSON.parse(savedUser),

@@ -28,7 +28,8 @@ api.interceptors.response.use(
 
     if (
       error.response?.status === 401 &&
-      error.response?.data?.code === 'TOKEN_EXPIRED' &&
+      originalRequest.url !== '/login' &&
+      originalRequest.url !== '/refresh-token' &&
       !originalRequest._retry
     ) {
       originalRequest._retry = true;
