@@ -846,3 +846,33 @@ export async function printLaporanEodBluetooth(data: LaporanEodDataForPrint, pre
   };
 }
 
+/**
+ * Konversi Uint8Array ke Base64
+ */
+function uint8ArrayToBase64(bytes: Uint8Array): string {
+  let binary = '';
+  const len = bytes.byteLength;
+  for (let i = 0; i < len; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary);
+}
+
+/**
+ * Fungsi Utama: Cetak Struk Transaksi via Aplikasi RawBT
+ */
+export async function printReceiptRawBT(data: ReceiptDataForPrint): Promise<void> {
+  const rawBytes = await generateEscPosReceiptBytes(data);
+  const base64Data = uint8ArrayToBase64(rawBytes);
+  window.location.href = "intent:base64," + base64Data + "#Intent;scheme=rawbt;package=ru.a402d.rawbtprinter;end;";
+}
+
+/**
+ * Fungsi Utama: Cetak Laporan EOD Tutup Toko via Aplikasi RawBT
+ */
+export async function printLaporanEodRawBT(data: LaporanEodDataForPrint): Promise<void> {
+  const rawBytes = await generateEscPosEodBytes(data);
+  const base64Data = uint8ArrayToBase64(rawBytes);
+  window.location.href = "intent:base64," + base64Data + "#Intent;scheme=rawbt;package=ru.a402d.rawbtprinter;end;";
+}
+

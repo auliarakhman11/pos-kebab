@@ -383,9 +383,9 @@ export class TutupTokoService {
     // Format nama file: YYYYMMDD + cabang_id + luar_tutup.png
     const [y, m, d] = dateStr.split('-');
     const ymd = `${y}${m}${d}`;
-    const filenameLuar = `${ymd}${cabangId}luar_tutup.png`;
-    const filenameDalam = `${ymd}${cabangId}dalam_tutup.png`;
-    const filenameBelakang = `${ymd}${cabangId}belakang_tutup.png`;
+    const filenameLuar = `${ymd}${cabangId}new_luar_tutup.png`;
+    const filenameDalam = `${ymd}${cabangId}new_dalam_tutup.png`;
+    const filenameBelakang = `${ymd}${cabangId}new_belakang_tutup.png`;
 
     // 2. Simpan 3 File Foto ke Disk Lokal Backend (public/img_outlet/)
     try {

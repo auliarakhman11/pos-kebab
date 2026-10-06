@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import {
   printReceiptBluetooth,
+  printReceiptRawBT,
   formatReceiptDateTime,
   ReceiptDataForPrint,
 } from '@/utils/printBluetooth';
@@ -179,7 +180,11 @@ export default function ModalDaftarTransaksi({
 
     for (const tx of transaksiList) {
       if (tx.void === 0) {
-        totalOmsetValid += tx.total;
+        const totalNormal = tx.items.reduce(
+          (sum, item) => sum + (item.qty * item.harga_normal) + (item.total_varian || 0),
+          0
+        );
+        totalOmsetValid += totalNormal;
       } else {
         totalVoid += 1;
       }
@@ -239,6 +244,52 @@ export default function ModalDaftarTransaksi({
       });
     } finally {
       setPrintingId(null);
+    }
+  };
+
+  // Handler Cetak Ulang Struk via RawBT
+  const handlePrintUlangRawBT = async (tx: TransaksiItem) => {
+    setNotification(null);
+    try {
+      const receiptPayload: ReceiptDataForPrint = {
+        no_invoice: tx.no_invoice,
+        urutan: tx.urutan,
+        cabang_nama: cabang?.nama || cabangNama || 'Cabang Kebab Yasmin',
+        cabang_telepon: (cabang as any)?.telepon || undefined,
+        waktu_transaksi: formatReceiptDateTime(tx.created_at || tx.tgl),
+        waktu_cetak: formatReceiptDateTime(),
+        kasir_nama: tx.nm_kasir || user?.name || 'Kasir',
+        nm_costumer: tx.nm_costumer || undefined,
+        jenis_order: tx.delivery_nama,
+        items: tx.items.map((item) => ({
+          qty: item.qty,
+          nm_produk: item.nm_produk,
+          varian_str:
+            item.varian && item.varian.length > 0
+              ? item.varian.map((v) => v.nm_varian).join(', ')
+              : undefined,
+          harga_satuan: item.harga,
+          total_harga: item.total,
+          catatan: item.catatan || undefined,
+        })),
+        subtotal: tx.total + tx.diskon,
+        diskon: tx.diskon > 0 ? tx.diskon : undefined,
+        total_bayar: tx.total,
+        dibayar: tx.dibayar,
+        kembalian: Math.max(0, tx.dibayar - tx.total),
+      };
+
+      await printReceiptRawBT(receiptPayload);
+      setNotification({
+        type: 'success',
+        message: `Membuka aplikasi RawBT untuk mencetak struk #${tx.no_invoice}...`,
+      });
+    } catch (err: any) {
+      console.error('Print RawBT error:', err);
+      setNotification({
+        type: 'error',
+        message: err.message || 'Gagal menyiapkan data untuk RawBT.',
+      });
     }
   };
 
@@ -600,7 +651,13 @@ export default function ModalDaftarTransaksi({
                               : 'text-slate-900 dark:text-white text-sm'
                           }`}
                         >
-                          Rp {tx.total.toLocaleString('id-ID')}
+                          {(() => {
+                            const totalNormal = tx.items.reduce(
+                              (sum, item) => sum + (item.qty * item.harga_normal) + (item.total_varian || 0),
+                              0
+                            );
+                            return `Rp ${totalNormal.toLocaleString('id-ID')}`;
+                          })()}
                         </div>
                         {tx.diskon > 0 && (
                           <div className="text-[10px] text-emerald-600 dark:text-emerald-400">
@@ -645,14 +702,24 @@ export default function ModalDaftarTransaksi({
                             type="button"
                             disabled={printingId === tx.id}
                             onClick={() => handlePrintUlang(tx)}
-                            className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-emerald-100 dark:hover:bg-emerald-950/40 text-slate-600 dark:text-slate-300 hover:text-emerald-600 transition-all cursor-pointer disabled:opacity-50"
-                            title="Cetak Ulang Struk (Bluetooth)"
+                            className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-emerald-100 dark:hover:bg-emerald-950/40 text-slate-600 dark:text-slate-300 hover:text-emerald-600 transition-all cursor-pointer disabled:opacity-50 flex items-center justify-center"
+                            title="Cetak Ulang Struk (Bluetooth Chrome)"
                           >
                             {printingId === tx.id ? (
                               <RefreshCw className="w-3.5 h-3.5 animate-spin text-emerald-600" />
                             ) : (
                               <Printer className="w-3.5 h-3.5" />
                             )}
+                          </button>
+
+                          {/* 2B. Tombol Cetak RawBT */}
+                          <button
+                            type="button"
+                            onClick={() => handlePrintUlangRawBT(tx)}
+                            className="px-2 py-1 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-emerald-100 dark:hover:bg-emerald-950/40 text-slate-600 dark:text-slate-300 hover:text-emerald-600 transition-all cursor-pointer font-bold text-[10px]"
+                            title="Cetak via Aplikasi RawBT"
+                          >
+                            RawBT
                           </button>
 
                           {/* 3. Tombol Void (Merah) - Hanya muncul jika belum void */}

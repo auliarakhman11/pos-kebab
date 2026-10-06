@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import {
   printReceiptBluetooth,
+  printReceiptRawBT,
   formatReceiptDateTime,
   ReceiptDataForPrint,
 } from '../utils/printBluetooth';
@@ -99,6 +100,39 @@ export default function ModalSuksesTransaksi({
       setPrintError(err.message || 'Gagal menyambungkan ke printer Bluetooth.');
     } finally {
       setIsPrinting(false);
+    }
+  };
+
+  const handlePrintRawBT = async () => {
+    try {
+      setPrintError(null);
+      setPrintSuccess(false);
+
+      const receiptPayload: ReceiptDataForPrint = {
+        no_invoice: data.no_invoice,
+        urutan: data.urutan,
+        cabang_nama: data.cabang_nama,
+        cabang_telepon: data.cabang_telepon || '0813-4103-733',
+        waktu_transaksi: formatReceiptDateTime(data.waktu_transaksi),
+        waktu_cetak: formatReceiptDateTime(data.waktu_cetak),
+        kasir_nama: data.kasir_nama,
+        nm_costumer: data.nm_costumer || '-',
+        jenis_order: data.jenis_order || 'Normal',
+        items: data.items,
+        subtotal: data.subtotal,
+        diskon: data.diskon || 0,
+        total_bayar: data.total_bayar,
+        dibayar: data.dibayar,
+        kembalian: data.kembalian,
+      };
+
+      await printReceiptRawBT(receiptPayload);
+
+      setPrintSuccess(true);
+      setTimeout(() => setPrintSuccess(false), 4000);
+    } catch (err: any) {
+      console.error('Gagal cetak RawBT:', err);
+      setPrintError(err.message || 'Gagal menyiapkan data untuk RawBT.');
     }
   };
 
@@ -316,37 +350,49 @@ export default function ModalSuksesTransaksi({
               {isPrinting ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>Menghubungkan...</span>
+                  <span>Konek...</span>
                 </>
               ) : (
                 <>
-                  <Printer className="w-4 h-4" />
-                  <span>Cetak Struk (Bluetooth)</span>
+                  <Printer className="w-4 h-4 shrink-0" />
+                  <span>Cetak (Chrome)</span>
                 </>
               )}
             </button>
 
+            {/* 1B. TOMBOL CETAK RAWBT */}
+            <button
+              type="button"
+              onClick={handlePrintRawBT}
+              className="h-12 px-4 rounded-2xl bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer shadow-md active:scale-95 dark:bg-slate-700 dark:hover:bg-slate-600"
+            >
+              <Printer className="w-4 h-4 shrink-0" />
+              <span>Cetak (RawBT)</span>
+            </button>
+
             {/* 2. TOMBOL WHATSAPP */}
-            {data.wa_link ? (
-              <a
-                href={data.wa_link}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="h-12 px-4 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer shadow-md shadow-emerald-600/25 active:scale-95"
-              >
-                <Share2 className="w-4 h-4" />
-                <span>Kirim Nota (WhatsApp)</span>
-                <ExternalLink className="w-3 h-3 opacity-70" />
-              </a>
-            ) : (
-              <div
-                title="Nomor telepon pelanggan tidak diinput"
-                className="h-12 px-4 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 font-bold text-xs flex items-center justify-center gap-2 cursor-not-allowed border border-slate-200 dark:border-slate-700"
-              >
-                <Share2 className="w-4 h-4" />
-                <span>WhatsApp (Tanpa No. HP)</span>
-              </div>
-            )}
+            <div className="sm:col-span-2">
+              {data.wa_link ? (
+                <a
+                  href={data.wa_link}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full h-12 px-4 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer shadow-md shadow-emerald-600/25 active:scale-95"
+                >
+                  <Share2 className="w-4 h-4" />
+                  <span>Kirim Nota (WhatsApp)</span>
+                  <ExternalLink className="w-3 h-3 opacity-70" />
+                </a>
+              ) : (
+                <div
+                  title="Nomor telepon pelanggan tidak diinput"
+                  className="w-full h-12 px-4 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 font-bold text-xs flex items-center justify-center gap-2 cursor-not-allowed border border-slate-200 dark:border-slate-700"
+                >
+                  <Share2 className="w-4 h-4" />
+                  <span>WhatsApp (Tanpa No. HP)</span>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* 3. TOMBOL SELESAI & TRANSAKSI BARU */}

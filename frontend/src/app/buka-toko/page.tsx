@@ -607,6 +607,12 @@ export default function BukaTokoPage() {
       canvas.height = video.videoHeight || 480;
       const ctx = canvas.getContext('2d');
       if (ctx) {
+        // Jika kamera depan (selfie), balikkan gambar agar tidak terbalik (mirror)
+        if (activeCameraTarget === 'selfie_karyawan') {
+          ctx.translate(canvas.width, 0);
+          ctx.scale(-1, 1);
+        }
+
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
         const dataUrl = canvas.toDataURL('image/png');
         setCapturedSnapshot(dataUrl);
@@ -1632,7 +1638,7 @@ export default function BukaTokoPage() {
                 <img
                   src={capturedSnapshot}
                   alt="Hasil Foto"
-                  className="w-full h-full object-cover"
+                  className={`w-full h-full object-cover ${activeCameraTarget === 'selfie_karyawan' ? '-scale-x-100' : ''}`}
                 />
               ) : (
                 <video
@@ -1640,7 +1646,7 @@ export default function BukaTokoPage() {
                   autoPlay
                   playsInline
                   muted
-                  className="w-full h-full object-cover"
+                  className={`w-full h-full object-cover ${activeCameraTarget === 'selfie_karyawan' ? '-scale-x-100' : ''}`}
                 />
               )}
 
