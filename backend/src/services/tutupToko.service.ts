@@ -112,6 +112,7 @@ export class TutupTokoService {
     const activeInvoiceNumbers = activeInvoices.map((i) => i.no_invoice);
     let detailProdukTerjual: DetailProdukTerjualItemDto[] = [];
     const invoiceQtyMap = new Map<string, number>();
+    const invoiceNormalMap = new Map<string, number>();
 
     if (activeInvoiceNumbers.length > 0) {
       const activeSales = await prisma.penjualanKasir.findMany({
@@ -130,13 +131,20 @@ export class TutupTokoService {
 
       for (const s of activeSales) {
         const qty = Number(s.qty) || 0;
-        const total = Number(s.total) || 0;
+        // Perhitungan harga_normal murni sesuai Riwayat Transaksi Kasir
+        const hargaNormal = Number(s.harga_normal) || Number(s.harga) || 0;
+        const totalVarian = Number(s.total_varian) || 0;
+        const itemNormalTotal = (qty * hargaNormal) + totalVarian;
 
         // Akumulasi qty produk per no_invoice untuk Laporan Penjualan
         const currentInvQty = invoiceQtyMap.get(s.no_invoice) || 0;
         invoiceQtyMap.set(s.no_invoice, currentInvQty + qty);
 
-        // Akumulasi Detail Produk Terjual
+        // Akumulasi total harga_normal per no_invoice
+        const currentInvNormal = invoiceNormalMap.get(s.no_invoice) || 0;
+        invoiceNormalMap.set(s.no_invoice, currentInvNormal + itemNormalTotal);
+
+        // Akumulasi Detail Produk Terjual (menggunakan harga_normal)
         const pId = s.produk_id;
         const pNama = s.produk?.nm_produk || `Produk #${pId}`;
         const dId = s.delivery_id;
@@ -150,12 +158,12 @@ export class TutupTokoService {
             delivery_id: dId,
             delivery_nama: dNama,
             qty_terjual: qty,
-            total_uang: total,
+            total_uang: itemNormalTotal,
           });
         } else {
           const item = productGroupMap.get(key)!;
           item.qty_terjual += qty;
-          item.total_uang += total;
+          item.total_uang += itemNormalTotal;
         }
       }
 
@@ -175,12 +183,15 @@ export class TutupTokoService {
       const pNama = inv.pembayaran?.pembayaran || (pId === 1 ? 'Cash / Tunai' : `Bayar #${pId}`);
       const key = `${dId}_${pId}`;
 
-      const totalInv = Number(inv.total) || 0;
+      // Ambil total invoice berbasis harga_normal (jika tidak ada di map, fallback ke inv.total)
+      const invNormal = invoiceNormalMap.has(inv.no_invoice)
+        ? invoiceNormalMap.get(inv.no_invoice)!
+        : Number(inv.total) || 0;
       const invQty = invoiceQtyMap.get(inv.no_invoice) || 0;
 
-      // Hitung total cash jika pembayaran_id === 1
+      // Hitung total cash jika pembayaran_id === 1 (berbasis harga_normal)
       if (pId === 1) {
-        totalPenjualanCash += totalInv;
+        totalPenjualanCash += invNormal;
       }
 
       if (!salesGroupMap.has(key)) {
@@ -191,13 +202,13 @@ export class TutupTokoService {
           pembayaran_nama: pNama,
           total_transaksi: 1,
           produk_terjual: invQty,
-          total_penjualan: totalInv,
+          total_penjualan: invNormal,
         });
       } else {
         const item = salesGroupMap.get(key)!;
         item.total_transaksi += 1;
         item.produk_terjual += invQty;
-        item.total_penjualan += totalInv;
+        item.total_penjualan += invNormal;
       }
     }
 
@@ -257,6 +268,17 @@ export class TutupTokoService {
     // =========================================================================
     // 5. LAPORAN BARANG BAWAAN (STOK FISIK: Masuk - Keluar - Refund)
     // =========================================================================
+    // Ambil list void invoice numbers pada sesi ini agar transaksi yang dibatalkan tidak mengurangi stok
+    const voidInvoices = await prisma.invoiceKasir.findMany({
+      where: {
+        kode: kodeSesi,
+        cabang_id: cabangId,
+        void: { not: 0 },
+      },
+      select: { no_invoice: true },
+    });
+    const voidInvoiceSet = new Set(voidInvoices.map((v) => v.no_invoice));
+
     const stokRecords = await prisma.stok.findMany({
       where: {
         kode: kodeSesi,
@@ -277,6 +299,11 @@ export class TutupTokoService {
     const stokGroupMap = new Map<number, LaporanBarangBawaanItemDto>();
 
     for (const st of stokRecords) {
+      // Lewati record stok yang berasal dari invoice yang dibatalkan (void)
+      if (st.no_invoice && voidInvoiceSet.has(st.no_invoice)) {
+        continue;
+      }
+
       const bId = st.bahan_id;
       const bNama = st.bahan?.bahan || `Bahan #${bId}`;
       const satuan = st.bahan?.satuan?.satuan || 'Pcs';

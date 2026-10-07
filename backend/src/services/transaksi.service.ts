@@ -242,7 +242,10 @@ export class TransaksiService {
         });
 
 
-        
+        // 4. Hapus record stok keluar akibat transaksi invoice yang dibatalkan
+        await tx.stok.deleteMany({
+          where: { no_invoice: noInvoice },
+        });
       },
       {
         timeout: 25000,
