@@ -36,6 +36,7 @@ import {
   printLaporanEodBluetooth,
   LaporanEodDataForPrint,
 } from '@/utils/printBluetooth';
+import ModalLaporanHtml from '@/components/ModalLaporanHtml';
 
 // Interface Data Rekap dari Backend
 interface LaporanPenjualanItem {
@@ -296,6 +297,8 @@ export default function TutupTokoPage() {
   const [isPrinting, setIsPrinting] = useState(false);
   const [printSuccess, setPrintSuccess] = useState(false);
   const [printError, setPrintError] = useState<string | null>(null);
+  const [showHtmlReport, setShowHtmlReport] = useState(false);
+  const [eodDataForHtml, setEodDataForHtml] = useState<LaporanEodDataForPrint | null>(null);
 
   // Inisialisasi Auth dan Fetch Data Toko
   useEffect(() => {
@@ -552,6 +555,56 @@ export default function TutupTokoPage() {
     }
   };
 
+  const generateEodData = (): LaporanEodDataForPrint => {
+    const nowStr = new Date().toLocaleTimeString('id-ID', { hour12: false });
+    return {
+      cabang_nama: cabang?.nama || infoToko?.cabang_nama || 'Cabang Kebab Yasmin',
+      kode_sesi: activeKode || infoToko?.kode || 'EOD',
+      waktu_buka: infoToko?.buka ? new Date(infoToko.buka).toLocaleTimeString('id-ID') : '-',
+      waktu_tutup: nowStr,
+      kasir_nama: infoToko?.nm_karyawan || user?.name || 'Kasir',
+      laporan_penjualan: laporanPenjualan.map((lp) => ({
+        delivery_nama: lp.delivery_nama,
+        pembayaran_nama: lp.pembayaran_nama,
+        total_transaksi: lp.total_transaksi,
+        total_penjualan: lp.total_penjualan,
+      })),
+      detail_produk_terjual: detailProduk.map((dp) => ({
+        nm_produk: dp.nm_produk,
+        delivery_nama: dp.delivery_nama,
+        qty_terjual: dp.qty_terjual,
+        total_uang: dp.total_uang,
+      })),
+      laporan_pengeluaran: {
+        total_pengeluaran: laporanPengeluaran.total_pengeluaran,
+        items: laporanPengeluaran.items.map((it) => ({
+          nm_barang: it.nm_barang,
+          qty: it.qty,
+          total_harga: it.total_harga,
+        })),
+      },
+      laporan_kas_bersih: {
+        total_penjualan_cash: laporanKasBersih.total_penjualan_cash,
+        total_pengeluaran_kebutuhan: laporanKasBersih.total_pengeluaran_kebutuhan,
+        kas_bersih: laporanKasBersih.kas_bersih,
+      },
+      laporan_barang_bawaan: laporanStok.map((st) => ({
+        nm_bahan: st.nm_bahan,
+        satuan: st.satuan,
+        masuk: st.masuk,
+        keluar: st.keluar,
+        refund: st.refund,
+        sisa_fisik: st.sisa_fisik,
+      })),
+      ket_kebutuhan: ketKebutuhan.trim() || undefined,
+    };
+  };
+
+  const handleShowHtmlReport = () => {
+    setEodDataForHtml(generateEodData());
+    setShowHtmlReport(true);
+  };
+
   // Cetak Laporan EOD via Bluetooth
   const handlePrintEodBluetooth = async () => {
     setIsPrinting(true);
@@ -559,49 +612,8 @@ export default function TutupTokoPage() {
     setPrintSuccess(false);
 
     try {
-      const nowStr = new Date().toLocaleTimeString('id-ID', { hour12: false });
-      const eodData: LaporanEodDataForPrint = {
-        cabang_nama: cabang?.nama || infoToko?.cabang_nama || 'Cabang Kebab Yasmin',
-        kode_sesi: activeKode || infoToko?.kode || 'EOD',
-        waktu_buka: infoToko?.buka ? new Date(infoToko.buka).toLocaleTimeString('id-ID') : '-',
-        waktu_tutup: nowStr,
-        kasir_nama: infoToko?.nm_karyawan || user?.name || 'Kasir',
-        laporan_penjualan: laporanPenjualan.map((lp) => ({
-          delivery_nama: lp.delivery_nama,
-          pembayaran_nama: lp.pembayaran_nama,
-          total_transaksi: lp.total_transaksi,
-          total_penjualan: lp.total_penjualan,
-        })),
-        detail_produk_terjual: detailProduk.map((dp) => ({
-          nm_produk: dp.nm_produk,
-          delivery_nama: dp.delivery_nama,
-          qty_terjual: dp.qty_terjual,
-          total_uang: dp.total_uang,
-        })),
-        laporan_pengeluaran: {
-          total_pengeluaran: laporanPengeluaran.total_pengeluaran,
-          items: laporanPengeluaran.items.map((it) => ({
-            nm_barang: it.nm_barang,
-            qty: it.qty,
-            total_harga: it.total_harga,
-          })),
-        },
-        laporan_kas_bersih: {
-          total_penjualan_cash: laporanKasBersih.total_penjualan_cash,
-          total_pengeluaran_kebutuhan: laporanKasBersih.total_pengeluaran_kebutuhan,
-          kas_bersih: laporanKasBersih.kas_bersih,
-        },
-        laporan_barang_bawaan: laporanStok.map((st) => ({
-          nm_bahan: st.nm_bahan,
-          satuan: st.satuan,
-          masuk: st.masuk,
-          keluar: st.keluar,
-          refund: st.refund,
-          sisa_fisik: st.sisa_fisik,
-        })),
-        ket_kebutuhan: ketKebutuhan.trim() || undefined,
-      };
-
+      const eodData = generateEodData();
+      setEodDataForHtml(eodData);
       await printLaporanEodBluetooth(eodData);
       setPrintSuccess(true);
     } catch (err: any) {
@@ -1632,24 +1644,35 @@ export default function TutupTokoPage() {
 
             {/* Tombol Cetak Laporan Bluetooth */}
             <div className="space-y-2.5 pt-2">
-              <button
-                type="button"
-                disabled={isPrinting}
-                onClick={handlePrintEodBluetooth}
-                className="w-full py-3.5 px-4 rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-black text-xs uppercase tracking-wider shadow-lg shadow-amber-500/25 flex items-center justify-center gap-2 transition-all cursor-pointer hover:scale-[1.02]"
-              >
-                {isPrinting ? (
-                  <>
-                    <RefreshCw className="w-4 h-4 animate-spin" />
-                    <span>Mencari & Menghubungkan Printer...</span>
-                  </>
-                ) : (
-                  <>
-                    <Printer className="w-4 h-4" />
-                    <span>Cetak Laporan EOD (Bluetooth)</span>
-                  </>
-                )}
-              </button>
+              <div className="flex flex-col sm:flex-row gap-2.5">
+                <button
+                  type="button"
+                  disabled={isPrinting}
+                  onClick={handlePrintEodBluetooth}
+                  className="flex-1 py-3 px-3 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-bold text-xs uppercase tracking-wider shadow-lg shadow-amber-500/25 flex items-center justify-center gap-2 transition-all cursor-pointer hover:scale-[1.02]"
+                >
+                  {isPrinting ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                      <span>Printer...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Printer className="w-4 h-4" />
+                      <span>Print (Bluetooth)</span>
+                    </>
+                  )}
+                </button>
+                
+                <button
+                  type="button"
+                  onClick={handleShowHtmlReport}
+                  className="flex-1 py-3 px-3 rounded-xl bg-blue-500 hover:bg-blue-600 text-white font-bold text-xs uppercase tracking-wider shadow-lg shadow-blue-500/25 flex items-center justify-center gap-2 transition-all cursor-pointer hover:scale-[1.02]"
+                >
+                  <FileText className="w-4 h-4" />
+                  <span>Lihat Laporan</span>
+                </button>
+              </div>
 
               <button
                 type="button"
@@ -1662,6 +1685,13 @@ export default function TutupTokoPage() {
           </div>
         </div>
       )}
+
+      {/* Modal Laporan HTML */}
+      <ModalLaporanHtml
+        isOpen={showHtmlReport}
+        onClose={() => setShowHtmlReport(false)}
+        data={eodDataForHtml}
+      />
     </div>
   );
 }
