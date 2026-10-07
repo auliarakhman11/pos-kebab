@@ -27,6 +27,7 @@ import {
   Sun,
   Moon,
   Printer,
+  FileText,
 } from 'lucide-react';
 import api from '@/lib/api';
 import useAuthStore from '@/store/authStore';
@@ -36,6 +37,7 @@ import {
   LaporanEodDataForPrint,
   requestBluetoothDevice,
 } from '@/utils/printBluetooth';
+import ModalLaporanHtml from '@/components/ModalLaporanHtml';
 
 // Helper Utility: Konversi File Gambar ke Base64 String
 export const fileToBase64 = (file: File): Promise<string> => {
@@ -289,6 +291,93 @@ export default function BukaTokoPage() {
     step?: string;
   } | null>(null);
   const [isPrintingPrev, setIsPrintingPrev] = useState(false);
+  const [isLoadingPrevHtml, setIsLoadingPrevHtml] = useState(false);
+  const [showPrevHtmlReport, setShowPrevHtmlReport] = useState(false);
+  const [prevEodDataForHtml, setPrevEodDataForHtml] = useState<LaporanEodDataForPrint | null>(null);
+
+  // Fetch Data Laporan Tutup Toko Sebelumnya
+  const fetchPrevEodData = async (): Promise<LaporanEodDataForPrint> => {
+    const token = Cookies.get('pos_access_token');
+    const res = await api.get('/rekap-toko/sebelumnya', {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+
+    if (!res.data?.success || !res.data.data) {
+      throw new Error(
+        res.data?.message || 'Data laporan tutup toko sebelumnya tidak ditemukan.'
+      );
+    }
+
+    const d = res.data.data;
+    const nowStr = new Date().toLocaleTimeString('id-ID', { hour12: false });
+    const eodPayload: LaporanEodDataForPrint = {
+      cabang_nama: d.info_toko?.cabang_nama || cabang?.nama || 'Cabang Kebab Yasmin',
+      kode_sesi: d.info_toko?.kode || 'EOD',
+      waktu_buka: d.info_toko?.buka
+        ? new Date(d.info_toko.buka).toLocaleTimeString('id-ID')
+        : '-',
+      waktu_tutup: d.info_toko?.tutup
+        ? new Date(d.info_toko.tutup).toLocaleTimeString('id-ID')
+        : nowStr,
+      kasir_nama: d.info_toko?.nm_karyawan || 'Kasir',
+      laporan_penjualan: (d.laporan_penjualan || []).map((lp: any) => ({
+        delivery_nama: lp.delivery_nama,
+        pembayaran_nama: lp.pembayaran_nama,
+        total_transaksi: lp.total_transaksi,
+        total_penjualan: lp.total_penjualan,
+      })),
+      detail_produk_terjual: (d.detail_produk_terjual || []).map((dp: any) => ({
+        nm_produk: dp.nm_produk,
+        delivery_nama: dp.delivery_nama,
+        qty_terjual: dp.qty_terjual,
+        total_uang: dp.total_uang,
+      })),
+      laporan_pengeluaran: {
+        total_pengeluaran: d.laporan_pengeluaran?.total_pengeluaran || 0,
+        items: (d.laporan_pengeluaran?.items || []).map((it: any) => ({
+          nm_barang: it.nm_barang,
+          qty: it.qty,
+          total_harga: it.total_harga,
+        })),
+      },
+      laporan_kas_bersih: {
+        total_penjualan_cash: d.laporan_kas_bersih?.total_penjualan_cash || 0,
+        total_pengeluaran_kebutuhan: d.laporan_kas_bersih?.total_pengeluaran_kebutuhan || 0,
+        kas_bersih: d.laporan_kas_bersih?.kas_bersih || 0,
+      },
+      laporan_barang_bawaan: (d.laporan_barang_bawaan || []).map((st: any) => ({
+        nm_bahan: st.nm_bahan,
+        satuan: st.satuan,
+        masuk: st.masuk,
+        keluar: st.keluar,
+        refund: st.refund,
+        sisa_fisik: st.sisa_fisik,
+      })),
+      ket_kebutuhan: d.info_toko?.ket_kebutuhan || undefined,
+    };
+
+    return eodPayload;
+  };
+
+  // Tampilkan Modal Laporan HTML Tutup Toko Sebelumnya
+  const handleShowPrevHtmlReport = async () => {
+    setIsLoadingPrevHtml(true);
+    setErrorMsg(null);
+    try {
+      const eodPayload = await fetchPrevEodData();
+      setPrevEodDataForHtml(eodPayload);
+      setShowPrevHtmlReport(true);
+    } catch (err: any) {
+      console.error('Show prev EOD error:', err);
+      setErrorMsg(
+        err.response?.data?.message ||
+          err.message ||
+          'Gagal memuat laporan tutup toko sebelumnya.'
+      );
+    } finally {
+      setIsLoadingPrevHtml(false);
+    }
+  };
 
   // Cetak Laporan Tutup Toko Sebelumnya via Bluetooth
   const handlePrintPrevEod = async () => {
@@ -297,65 +386,8 @@ export default function BukaTokoPage() {
     setSuccessMsg(null);
     try {
       const device = await requestBluetoothDevice();
-      const token = Cookies.get('pos_access_token');
-      const res = await api.get('/rekap-toko/sebelumnya', {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      });
-
-      if (!res.data?.success || !res.data.data) {
-        throw new Error(
-          res.data?.message || 'Data laporan tutup toko sebelumnya tidak ditemukan.'
-        );
-      }
-
-      const d = res.data.data;
-      const nowStr = new Date().toLocaleTimeString('id-ID', { hour12: false });
-      const eodPayload: LaporanEodDataForPrint = {
-        cabang_nama: d.info_toko?.cabang_nama || cabang?.nama || 'Cabang Kebab Yasmin',
-        kode_sesi: d.info_toko?.kode || 'EOD',
-        waktu_buka: d.info_toko?.buka
-          ? new Date(d.info_toko.buka).toLocaleTimeString('id-ID')
-          : '-',
-        waktu_tutup: d.info_toko?.tutup
-          ? new Date(d.info_toko.tutup).toLocaleTimeString('id-ID')
-          : nowStr,
-        kasir_nama: d.info_toko?.nm_karyawan || 'Kasir',
-        laporan_penjualan: (d.laporan_penjualan || []).map((lp: any) => ({
-          delivery_nama: lp.delivery_nama,
-          pembayaran_nama: lp.pembayaran_nama,
-          total_transaksi: lp.total_transaksi,
-          total_penjualan: lp.total_penjualan,
-        })),
-        detail_produk_terjual: (d.detail_produk_terjual || []).map((dp: any) => ({
-          nm_produk: dp.nm_produk,
-          delivery_nama: dp.delivery_nama,
-          qty_terjual: dp.qty_terjual,
-          total_uang: dp.total_uang,
-        })),
-        laporan_pengeluaran: {
-          total_pengeluaran: d.laporan_pengeluaran?.total_pengeluaran || 0,
-          items: (d.laporan_pengeluaran?.items || []).map((it: any) => ({
-            nm_barang: it.nm_barang,
-            qty: it.qty,
-            total_harga: it.total_harga,
-          })),
-        },
-        laporan_kas_bersih: {
-          total_penjualan_cash: d.laporan_kas_bersih?.total_penjualan_cash || 0,
-          total_pengeluaran_kebutuhan: d.laporan_kas_bersih?.total_pengeluaran_kebutuhan || 0,
-          kas_bersih: d.laporan_kas_bersih?.kas_bersih || 0,
-        },
-        laporan_barang_bawaan: (d.laporan_barang_bawaan || []).map((st: any) => ({
-          nm_bahan: st.nm_bahan,
-          satuan: st.satuan,
-          masuk: st.masuk,
-          keluar: st.keluar,
-          refund: st.refund,
-          sisa_fisik: st.sisa_fisik,
-        })),
-        ket_kebutuhan: d.info_toko?.ket_kebutuhan || undefined,
-      };
-
+      const eodPayload = await fetchPrevEodData();
+      setPrevEodDataForHtml(eodPayload);
       await printLaporanEodBluetooth(eodPayload, device);
       setSuccessMsg(
         'Laporan Tutup Toko Sebelumnya berhasil dicetak ke printer thermal Bluetooth!'
@@ -959,6 +991,26 @@ export default function BukaTokoPage() {
                   <>
                     <Printer className="w-3.5 h-3.5 text-amber-500" />
                     <span>Cetak Laporan Tutup Toko Sebelumnya</span>
+                  </>
+                )}
+              </button>
+
+              <button
+                type="button"
+                onClick={handleShowPrevHtmlReport}
+                disabled={isLoadingPrevHtml}
+                className="inline-flex items-center gap-2 bg-white/95 hover:bg-white text-blue-700 dark:bg-slate-900/90 dark:hover:bg-slate-900 dark:text-blue-400 border border-white/30 dark:border-slate-700 px-3.5 py-2 rounded-xl text-xs font-bold shadow-md hover:scale-105 active:scale-95 transition-all cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+                title="Lihat Laporan Tutup Toko Sebelumnya (Tampilan Layar / Cetak)"
+              >
+                {isLoadingPrevHtml ? (
+                  <>
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin text-blue-500" />
+                    <span>Memuat Laporan...</span>
+                  </>
+                ) : (
+                  <>
+                    <FileText className="w-3.5 h-3.5 text-blue-500" />
+                    <span>Lihat Laporan Tutup Toko Sebelumnya</span>
                   </>
                 )}
               </button>
@@ -1751,6 +1803,12 @@ export default function BukaTokoPage() {
           </div>
         </div>
       )}
+      {/* Modal Preview Laporan Tutup Toko Sebelumnya */}
+      <ModalLaporanHtml
+        isOpen={showPrevHtmlReport}
+        onClose={() => setShowPrevHtmlReport(false)}
+        data={prevEodDataForHtml}
+      />
     </div>
   );
 }
