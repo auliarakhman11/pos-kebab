@@ -324,6 +324,7 @@ export default function BukaTokoPage() {
         delivery_nama: lp.delivery_nama,
         pembayaran_nama: lp.pembayaran_nama,
         total_transaksi: lp.total_transaksi,
+        produk_terjual: lp.produk_terjual,
         total_penjualan: lp.total_penjualan,
       })),
       detail_produk_terjual: (d.detail_produk_terjual || []).map((dp: any) => ({

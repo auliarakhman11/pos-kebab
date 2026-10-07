@@ -72,21 +72,56 @@ export default function ModalLaporanHtml({ isOpen, onClose, data }: ModalLaporan
                 </thead>
                 <tbody>
                   {data.laporan_penjualan.length > 0 ? (
-                    data.laporan_penjualan.map((item, idx) => (
-                      <tr key={idx}>
-                        <td className="border border-black p-1.5">{item.delivery_nama}</td>
-                        <td className="border border-black p-1.5">{item.pembayaran_nama}</td>
-                        <td className="border border-black p-1.5">{item.total_transaksi}</td>
-                        <td className="border border-black p-1.5">-</td>
-                        <td className="border border-black p-1.5 text-right">{item.total_penjualan.toLocaleString('id-ID')}</td>
-                      </tr>
-                    ))
+                    data.laporan_penjualan.map((item, idx) => {
+                      // Hitung produk terjual dari item atau fallback dari detail_produk_terjual
+                      let qtyTerjual = item.produk_terjual;
+                      if (qtyTerjual === undefined || qtyTerjual === null) {
+                        const matchingDeliveryRows = data.laporan_penjualan.filter(
+                          (lp) => lp.delivery_nama.toLowerCase() === item.delivery_nama.toLowerCase()
+                        );
+                        const totalQtyChannel = data.detail_produk_terjual
+                          .filter((dp) => dp.delivery_nama.toLowerCase() === item.delivery_nama.toLowerCase())
+                          .reduce((sum, dp) => sum + dp.qty_terjual, 0);
+
+                        if (matchingDeliveryRows.length === 1) {
+                          qtyTerjual = totalQtyChannel;
+                        } else if (matchingDeliveryRows.length > 1 && totalQtyChannel > 0) {
+                          const totalTrxChannel = matchingDeliveryRows.reduce((sum, r) => sum + r.total_transaksi, 0);
+                          qtyTerjual = totalTrxChannel > 0 
+                            ? Math.round((item.total_transaksi / totalTrxChannel) * totalQtyChannel) 
+                            : 0;
+                        } else {
+                          qtyTerjual = 0;
+                        }
+                      }
+
+                      return (
+                        <tr key={idx}>
+                          <td className="border border-black p-1.5">{item.delivery_nama}</td>
+                          <td className="border border-black p-1.5">{item.pembayaran_nama}</td>
+                          <td className="border border-black p-1.5">{item.total_transaksi}</td>
+                          <td className="border border-black p-1.5 font-semibold">{qtyTerjual}</td>
+                          <td className="border border-black p-1.5 text-right">{item.total_penjualan.toLocaleString('id-ID')}</td>
+                        </tr>
+                      );
+                    })
                   ) : (
                     <tr><td colSpan={5} className="border border-black p-1.5 italic">Tidak ada transaksi</td></tr>
                   )}
                   {/* Row Total Penjualan */}
                   <tr className="font-bold">
-                    <td colSpan={4} className="border border-black p-1.5">Total</td>
+                    <td colSpan={2} className="border border-black p-1.5">Total</td>
+                    <td className="border border-black p-1.5 text-center">
+                      {data.laporan_penjualan.reduce((sum, item) => sum + item.total_transaksi, 0)}
+                    </td>
+                    <td className="border border-black p-1.5 text-center">
+                      {data.laporan_penjualan.reduce((sum, item) => {
+                        if (item.produk_terjual !== undefined && item.produk_terjual !== null) {
+                          return sum + item.produk_terjual;
+                        }
+                        return sum;
+                      }, 0) || data.detail_produk_terjual.reduce((sum, dp) => sum + dp.qty_terjual, 0)}
+                    </td>
                     <td className="border border-black p-1.5 text-right">
                       {data.laporan_penjualan.reduce((sum, item) => sum + item.total_penjualan, 0).toLocaleString('id-ID')}
                     </td>

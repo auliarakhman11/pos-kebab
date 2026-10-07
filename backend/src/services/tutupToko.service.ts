@@ -94,7 +94,7 @@ export class TutupTokoService {
     const activeBukaTokoId = Number(bukaTokoRecord.id);
 
     // =========================================================================
-    // 1. LAPORAN PENJUALAN (Group by delivery_id & pembayaran_id dari invoice_kasir)
+    // 1 & 2. AMBIL INVOICE & PENJUALAN KASIR UNTUK LAPORAN PENJUALAN & DETAIL PRODUK
     // =========================================================================
     const activeInvoices = await prisma.invoiceKasir.findMany({
       where: {
@@ -109,49 +109,9 @@ export class TutupTokoService {
       orderBy: { id: 'asc' },
     });
 
-    // Grouping Map: `${delivery_id}_${pembayaran_id}`
-    const salesGroupMap = new Map<string, LaporanPenjualanItemDto>();
-    let totalPenjualanCash = 0;
-
-    for (const inv of activeInvoices) {
-      const dId = inv.delivery_id;
-      const dNama = inv.delivery?.delivery || `Order #${dId}`;
-      const pId = Number(inv.pembayaran_id);
-      const pNama = inv.pembayaran?.pembayaran || (pId === 1 ? 'Cash / Tunai' : `Bayar #${pId}`);
-      const key = `${dId}_${pId}`;
-
-      const totalInv = Number(inv.total) || 0;
-
-      // Hitung total cash jika pembayaran_id === 1
-      if (pId === 1) {
-        totalPenjualanCash += totalInv;
-      }
-
-      if (!salesGroupMap.has(key)) {
-        salesGroupMap.set(key, {
-          delivery_id: dId,
-          delivery_nama: dNama,
-          pembayaran_id: pId,
-          pembayaran_nama: pNama,
-          total_transaksi: 1,
-          total_penjualan: totalInv,
-        });
-      } else {
-        const item = salesGroupMap.get(key)!;
-        item.total_transaksi += 1;
-        item.total_penjualan += totalInv;
-      }
-    }
-
-    const laporanPenjualan: LaporanPenjualanItemDto[] = Array.from(salesGroupMap.values()).sort(
-      (a, b) => a.delivery_id - b.delivery_id || a.pembayaran_id - b.pembayaran_id
-    );
-
-    // =========================================================================
-    // 2. DETAIL PRODUK TERJUAL (Group by produk_id & delivery_id dari penjualan_kasir)
-    // =========================================================================
     const activeInvoiceNumbers = activeInvoices.map((i) => i.no_invoice);
     let detailProdukTerjual: DetailProdukTerjualItemDto[] = [];
+    const invoiceQtyMap = new Map<string, number>();
 
     if (activeInvoiceNumbers.length > 0) {
       const activeSales = await prisma.penjualanKasir.findMany({
@@ -165,18 +125,23 @@ export class TutupTokoService {
         },
       });
 
-      // Grouping Map: `${produk_id}_${delivery_id}`
+      // Hitung akumulasi qty per no_invoice dan per produk_id & delivery_id
       const productGroupMap = new Map<string, DetailProdukTerjualItemDto>();
 
       for (const s of activeSales) {
+        const qty = Number(s.qty) || 0;
+        const total = Number(s.total) || 0;
+
+        // Akumulasi qty produk per no_invoice untuk Laporan Penjualan
+        const currentInvQty = invoiceQtyMap.get(s.no_invoice) || 0;
+        invoiceQtyMap.set(s.no_invoice, currentInvQty + qty);
+
+        // Akumulasi Detail Produk Terjual
         const pId = s.produk_id;
         const pNama = s.produk?.nm_produk || `Produk #${pId}`;
         const dId = s.delivery_id;
         const dNama = s.delivery?.delivery || `Order #${dId}`;
         const key = `${pId}_${dId}`;
-
-        const qty = Number(s.qty) || 0;
-        const total = Number(s.total) || 0;
 
         if (!productGroupMap.has(key)) {
           productGroupMap.set(key, {
@@ -198,6 +163,47 @@ export class TutupTokoService {
         (a, b) => a.nm_produk.localeCompare(b.nm_produk) || a.delivery_id - b.delivery_id
       );
     }
+
+    // Grouping Map: `${delivery_id}_${pembayaran_id}`
+    const salesGroupMap = new Map<string, LaporanPenjualanItemDto>();
+    let totalPenjualanCash = 0;
+
+    for (const inv of activeInvoices) {
+      const dId = inv.delivery_id;
+      const dNama = inv.delivery?.delivery || `Order #${dId}`;
+      const pId = Number(inv.pembayaran_id);
+      const pNama = inv.pembayaran?.pembayaran || (pId === 1 ? 'Cash / Tunai' : `Bayar #${pId}`);
+      const key = `${dId}_${pId}`;
+
+      const totalInv = Number(inv.total) || 0;
+      const invQty = invoiceQtyMap.get(inv.no_invoice) || 0;
+
+      // Hitung total cash jika pembayaran_id === 1
+      if (pId === 1) {
+        totalPenjualanCash += totalInv;
+      }
+
+      if (!salesGroupMap.has(key)) {
+        salesGroupMap.set(key, {
+          delivery_id: dId,
+          delivery_nama: dNama,
+          pembayaran_id: pId,
+          pembayaran_nama: pNama,
+          total_transaksi: 1,
+          produk_terjual: invQty,
+          total_penjualan: totalInv,
+        });
+      } else {
+        const item = salesGroupMap.get(key)!;
+        item.total_transaksi += 1;
+        item.produk_terjual += invQty;
+        item.total_penjualan += totalInv;
+      }
+    }
+
+    const laporanPenjualan: LaporanPenjualanItemDto[] = Array.from(salesGroupMap.values()).sort(
+      (a, b) => a.delivery_id - b.delivery_id || a.pembayaran_id - b.pembayaran_id
+    );
 
     // =========================================================================
     // 3. LAPORAN PENGELUARAN (Dari Jurnal Barang Kebutuhan akun_id = 13)

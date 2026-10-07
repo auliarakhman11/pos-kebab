@@ -4,6 +4,7 @@ export interface LaporanPenjualanItemDto {
   pembayaran_id: number;
   pembayaran_nama: string;
   total_transaksi: number;
+  produk_terjual: number;
   total_penjualan: number;
 }
 

@@ -563,6 +563,7 @@ export interface LaporanEodDataForPrint {
     delivery_nama: string;
     pembayaran_nama: string;
     total_transaksi: number;
+    produk_terjual?: number;
     total_penjualan: number;
   }[];
   detail_produk_terjual: {

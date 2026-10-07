@@ -45,6 +45,7 @@ interface LaporanPenjualanItem {
   pembayaran_id: number;
   pembayaran_nama: string;
   total_transaksi: number;
+  produk_terjual?: number;
   total_penjualan: number;
 }
 
@@ -567,6 +568,7 @@ export default function TutupTokoPage() {
         delivery_nama: lp.delivery_nama,
         pembayaran_nama: lp.pembayaran_nama,
         total_transaksi: lp.total_transaksi,
+        produk_terjual: lp.produk_terjual,
         total_penjualan: lp.total_penjualan,
       })),
       detail_produk_terjual: detailProduk.map((dp) => ({
