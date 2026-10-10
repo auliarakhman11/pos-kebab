@@ -111,3 +111,33 @@ export function formatReceiptDate(d: Date = new Date(), timeZone?: string | null
   return `${map.day}/${map.month}/${map.year} ${hour}:${map.minute}`;
 }
 
+/**
+ * Helper untuk menentukan URL foto karyawan dari tabel jaga_outlet:
+ * - Jika ada karakter "new" di field foto -> https://pos.kebabyasmin.id/img_kry/{foto}
+ * - Jika TIDAK ada karakter "new" di field foto -> https://kasir.kebabyasmin.id/img_kry/{foto}
+ */
+export function getUrlFotoKaryawan(foto: string | null | undefined): string | null {
+  if (!foto || typeof foto !== 'string' || foto.trim() === '') return null;
+
+  // Jika sudah berupa data base64 (data:image/...) gunakan langsung
+  if (foto.startsWith('data:')) {
+    return foto;
+  }
+
+  // Jika sudah berupa full URL (http:// atau https://), ekstrak nama filenya
+  let filename = foto;
+  if (foto.startsWith('http://') || foto.startsWith('https://')) {
+    const parts = foto.split('/');
+    filename = parts[parts.length - 1] || foto;
+  }
+
+  // Bersihkan slash atau path di awal
+  const cleanFilename = filename.replace(/^\/+/, '');
+
+  if (cleanFilename.includes('new')) {
+    return `https://be.kebabyasmin.id/img_kry/${cleanFilename}`;
+  } else {
+    return `https://kasir.kebabyasmin.id/img_kry/${cleanFilename}`;
+  }
+}
+

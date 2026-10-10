@@ -5,7 +5,7 @@ import {
   KebutuhanListItemDto,
   StatusOperasionalDto,
 } from '../types/operasional.types';
-import { getZonaWaktu, saveBase64Image } from '../utils/fileHelper';
+import { getZonaWaktu, saveBase64Image, getUrlFotoKaryawan } from '../utils/fileHelper';
 
 export class OperasionalService {
   /**
@@ -59,7 +59,7 @@ export class OperasionalService {
       karyawan_id: j.karyawan_id,
       nama: j.karyawan?.nama || 'Petugas',
       ganti: j.ganti,
-      foto: j.foto ? (j.foto.startsWith('http') || j.foto.startsWith('/') ? j.foto : `/img_kry/${j.foto}`) : null,
+      foto: getUrlFotoKaryawan(j.foto),
       created_at: j.created_at ? j.created_at.toISOString() : null,
       updated_at: j.updated_at ? j.updated_at.toISOString() : null,
     }));
@@ -308,11 +308,7 @@ export class OperasionalService {
             id: Number(j.id),
             karyawan_id: j.karyawan_id,
             nama: j.karyawan?.nama || 'Petugas',
-            foto: j.foto
-              ? j.foto.startsWith('http') || j.foto.startsWith('/')
-                ? j.foto
-                : `/img_kry/${j.foto}`
-              : null,
+            foto: getUrlFotoKaryawan(j.foto),
           })),
         };
       },
