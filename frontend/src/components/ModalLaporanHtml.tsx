@@ -141,6 +141,20 @@ export default function ModalLaporanHtml({ isOpen, onClose, data }: ModalLaporan
                       Rp. {data.laporan_kas_bersih.total_pengeluaran_kebutuhan.toLocaleString('id-ID')}
                     </td>
                   </tr>
+                  {data.laporan_pengeluaran_akun && (data.laporan_pengeluaran_akun.total_pengeluaran > 0 || data.laporan_pengeluaran_akun.items.length > 0) && (
+                    <tr>
+                      <td colSpan={3} className="border border-black p-1.5">Pengeluaran Akun</td>
+                      <td colSpan={2} className="border border-black p-1.5 text-right">
+                        Rp. {data.laporan_pengeluaran_akun.total_pengeluaran.toLocaleString('id-ID')}
+                      </td>
+                    </tr>
+                  )}
+                  <tr className="font-bold">
+                    <td colSpan={3} className="border border-black p-1.5">Total Pengeluaran</td>
+                    <td colSpan={2} className="border border-black p-1.5 text-right">
+                      Rp. {(data.laporan_kas_bersih.total_pengeluaran ?? (data.laporan_kas_bersih.total_pengeluaran_kebutuhan + (data.laporan_pengeluaran_akun?.total_pengeluaran || 0))).toLocaleString('id-ID')}
+                    </td>
+                  </tr>
 
                   {/* Laporan Kas */}
                   <tr className="bg-gray-100">
@@ -161,6 +175,39 @@ export default function ModalLaporanHtml({ isOpen, onClose, data }: ModalLaporan
                 </tbody>
               </table>
             </div>
+
+            {/* Tabel Detail Pengeluaran Akun (Jika ada) */}
+            {data.laporan_pengeluaran_akun && data.laporan_pengeluaran_akun.items.length > 0 && (
+              <div className="w-full overflow-x-auto mt-6">
+                <table className="w-full border-collapse border border-black text-xs sm:text-sm text-center">
+                  <thead>
+                    <tr className="bg-gray-100">
+                      <th colSpan={3} className="border border-black p-1.5 font-bold">Detail Pengeluaran Akun</th>
+                    </tr>
+                    <tr className="bg-gray-100">
+                      <th className="border border-black p-1.5 font-bold text-left">Nama Akun</th>
+                      <th className="border border-black p-1.5 font-bold text-left">Keterangan</th>
+                      <th className="border border-black p-1.5 font-bold text-right">Jumlah</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {data.laporan_pengeluaran_akun.items.map((ak, idx) => (
+                      <tr key={idx}>
+                        <td className="border border-black p-1.5 text-left font-semibold">{ak.nm_akun}</td>
+                        <td className="border border-black p-1.5 text-left">{ak.ket || '-'}</td>
+                        <td className="border border-black p-1.5 text-right">Rp. {ak.jumlah.toLocaleString('id-ID')}</td>
+                      </tr>
+                    ))}
+                    <tr className="font-bold">
+                      <td colSpan={2} className="border border-black p-1.5 text-left">Total Pengeluaran Akun</td>
+                      <td className="border border-black p-1.5 text-right">
+                        Rp. {data.laporan_pengeluaran_akun.total_pengeluaran.toLocaleString('id-ID')}
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            )}
 
             {/* Tabel Detail Produk Terjual */}
             <div className="w-full overflow-x-auto mt-6">

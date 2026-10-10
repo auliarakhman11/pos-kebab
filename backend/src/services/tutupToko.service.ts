@@ -6,6 +6,7 @@ import {
   LaporanPenjualanItemDto,
   DetailProdukTerjualItemDto,
   LaporanPengeluaranItemDto,
+  LaporanPengeluaranAkunItemDto,
   LaporanBarangBawaanItemDto,
   TutupTokoRequestDto,
 } from '../types/tutupToko.types';
@@ -261,9 +262,55 @@ export class TutupTokoService {
     }
 
     // =========================================================================
-    // 4. LAPORAN KAS BERSIH (Cash Sales - Total Pengeluaran)
+    // 3B. LAPORAN PENGELUARAN AKUN (Dari tabel pengeluaran_jurnal)
+    // where: tgl = tanggal_buka_toko AND akun_id NOT IN (3, 14, 15) AND cabang_id = id cabang buka toko
     // =========================================================================
-    const kasBersih = totalPenjualanCash - totalPengeluaranKebutuhan;
+    const cabangIdBukaToko = Number(bukaTokoRecord.cabang_id);
+    const tglBukaToko = bukaTokoRecord.tgl;
+
+    const rawPengeluaranJurnal = await prisma.pengeluaranJurnal.findMany({
+      where: {
+        cabang_id: cabangIdBukaToko,
+        tgl: tglBukaToko,
+        akun_id: {
+          notIn: [3, 14, 15],
+        },
+      },
+      orderBy: { id: 'asc' },
+    });
+
+    const pjAkunIds = Array.from(new Set(rawPengeluaranJurnal.map((pj) => pj.akun_id))).filter(Boolean);
+    const masterAkunPengeluaran = await prisma.akunPengeluaran.findMany({
+      where: { id: { in: pjAkunIds } },
+      select: { id: true, nm_akun: true },
+    });
+    const akunNameMap = new Map(masterAkunPengeluaran.map((a) => [a.id, a.nm_akun]));
+
+    let totalPengeluaranAkun = 0;
+    const pengeluaranAkunItems: LaporanPengeluaranAkunItemDto[] = [];
+
+    for (const pj of rawPengeluaranJurnal) {
+      const jumlah = Number(pj.jumlah) || 0;
+      totalPengeluaranAkun += jumlah;
+      const nmAkun = akunNameMap.get(pj.akun_id) || `Akun #${pj.akun_id}`;
+
+      pengeluaranAkunItems.push({
+        id: pj.id,
+        kd_gabungan: pj.kd_gabungan || '',
+        akun_id: pj.akun_id,
+        nm_akun: nmAkun,
+        ket: pj.ket || '',
+        jumlah: jumlah,
+        tgl: pj.tgl instanceof Date ? pj.tgl.toISOString().split('T')[0] : String(pj.tgl),
+        created_at: pj.created_at ? pj.created_at.toISOString() : undefined,
+      });
+    }
+
+    // =========================================================================
+    // 4. LAPORAN KAS BERSIH (Cash Sales - (Pengeluaran Kebutuhan + Pengeluaran Akun))
+    // =========================================================================
+    const totalPengeluaranGabungan = totalPengeluaranKebutuhan + totalPengeluaranAkun;
+    const kasBersih = totalPenjualanCash - totalPengeluaranGabungan;
 
     // =========================================================================
     // 5. LAPORAN BARANG BAWAAN (STOK FISIK: Masuk - Keluar - Refund)
@@ -358,9 +405,15 @@ export class TutupTokoService {
         total_pengeluaran: totalPengeluaranKebutuhan,
         items: pengeluaranItems,
       },
+      laporan_pengeluaran_akun: {
+        total_pengeluaran: totalPengeluaranAkun,
+        items: pengeluaranAkunItems,
+      },
       laporan_kas_bersih: {
         total_penjualan_cash: totalPenjualanCash,
         total_pengeluaran_kebutuhan: totalPengeluaranKebutuhan,
+        total_pengeluaran_akun: totalPengeluaranAkun,
+        total_pengeluaran: totalPengeluaranGabungan,
         kas_bersih: kasBersih,
       },
       laporan_barang_bawaan: laporanBarangBawaan,

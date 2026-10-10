@@ -341,9 +341,19 @@ export default function BukaTokoPage() {
           total_harga: it.total_harga,
         })),
       },
+      laporan_pengeluaran_akun: {
+        total_pengeluaran: d.laporan_pengeluaran_akun?.total_pengeluaran || 0,
+        items: (d.laporan_pengeluaran_akun?.items || []).map((it: any) => ({
+          nm_akun: it.nm_akun,
+          ket: it.ket,
+          jumlah: it.jumlah,
+        })),
+      },
       laporan_kas_bersih: {
         total_penjualan_cash: d.laporan_kas_bersih?.total_penjualan_cash || 0,
         total_pengeluaran_kebutuhan: d.laporan_kas_bersih?.total_pengeluaran_kebutuhan || 0,
+        total_pengeluaran_akun: d.laporan_kas_bersih?.total_pengeluaran_akun || 0,
+        total_pengeluaran: d.laporan_kas_bersih?.total_pengeluaran || 0,
         kas_bersih: d.laporan_kas_bersih?.kas_bersih || 0,
       },
       laporan_barang_bawaan: (d.laporan_barang_bawaan || []).map((st: any) => ({

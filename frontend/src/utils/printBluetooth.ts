@@ -580,9 +580,19 @@ export interface LaporanEodDataForPrint {
       total_harga: number;
     }[];
   };
+  laporan_pengeluaran_akun?: {
+    total_pengeluaran: number;
+    items: {
+      nm_akun: string;
+      ket?: string;
+      jumlah: number;
+    }[];
+  };
   laporan_kas_bersih: {
     total_penjualan_cash: number;
     total_pengeluaran_kebutuhan: number;
+    total_pengeluaran_akun?: number;
+    total_pengeluaran?: number;
     kas_bersih: number;
   };
   laporan_barang_bawaan: {
@@ -634,15 +644,20 @@ export async function generateEscPosEodBytes(data: LaporanEodDataForPrint, width
   b.alignLeft();
   b.twoColumns('Penjualan Tunai (Cash)', `Rp ${data.laporan_kas_bersih.total_penjualan_cash.toLocaleString('id-ID')}`, width);
   b.twoColumns('Pengeluaran Kebutuhan', `Rp ${data.laporan_kas_bersih.total_pengeluaran_kebutuhan.toLocaleString('id-ID')}`, width);
+  if (data.laporan_kas_bersih.total_pengeluaran_akun !== undefined && data.laporan_kas_bersih.total_pengeluaran_akun > 0) {
+    b.twoColumns('Pengeluaran Akun', `Rp ${data.laporan_kas_bersih.total_pengeluaran_akun.toLocaleString('id-ID')}`, width);
+  }
+  const totalPengeluaranAll = data.laporan_kas_bersih.total_pengeluaran ?? (data.laporan_kas_bersih.total_pengeluaran_kebutuhan + (data.laporan_kas_bersih.total_pengeluaran_akun || 0));
+  b.twoColumns('Total Pengeluaran', `Rp ${totalPengeluaranAll.toLocaleString('id-ID')}`, width);
   b.divider(width, '-');
   b.bold(true);
   b.twoColumns('KAS BERSIH SHIFT', `Rp ${data.laporan_kas_bersih.kas_bersih.toLocaleString('id-ID')}`, width);
   b.bold(false);
   b.divider(width, '=');
 
-  // 4. REKAP PENJUALAN (Group Order & Pembayaran)
+  // 1. REKAP PENJUALAN (Group Order & Pembayaran)
   b.bold(true);
-  b.line('REKAP PENJUALAN KASIR');
+  b.line('1. REKAP PENJUALAN (ORDER & BAYAR)');
   b.bold(false);
   if (data.laporan_penjualan.length === 0) {
     b.line('(Belum ada transaksi penjualan)');
@@ -654,9 +669,39 @@ export async function generateEscPosEodBytes(data: LaporanEodDataForPrint, width
   }
   b.divider(width, '-');
 
-  // 5. DETAIL PRODUK TERJUAL
+  // 2. PENGELUARAN AKUN
   b.bold(true);
-  b.line('DETAIL PRODUK TERJUAL');
+  b.line('2. PENGELUARAN AKUN');
+  b.bold(false);
+  const akunItems = data.laporan_pengeluaran_akun?.items || [];
+  if (akunItems.length === 0) {
+    b.line('(Tidak ada pengeluaran akun)');
+  } else {
+    for (const ak of akunItems) {
+      const label = ak.ket ? `${ak.nm_akun} (${ak.ket})` : ak.nm_akun;
+      b.twoColumns(label, `Rp ${ak.jumlah.toLocaleString('id-ID')}`, width);
+    }
+    b.twoColumns('Total Pengeluaran Akun:', `Rp ${(data.laporan_pengeluaran_akun?.total_pengeluaran || 0).toLocaleString('id-ID')}`, width);
+  }
+  b.divider(width, '-');
+
+  // 3. PENGELUARAN KEBUTUHAN
+  b.bold(true);
+  b.line('3. PENGELUARAN KEBUTUHAN');
+  b.bold(false);
+  if (data.laporan_pengeluaran.items.length === 0) {
+    b.line('(Tidak ada pengeluaran kebutuhan)');
+  } else {
+    for (const keb of data.laporan_pengeluaran.items) {
+      b.twoColumns(`${keb.nm_barang} (${keb.qty} pcs)`, `Rp ${keb.total_harga.toLocaleString('id-ID')}`, width);
+    }
+    b.twoColumns('Total Pengeluaran Keb:', `Rp ${data.laporan_pengeluaran.total_pengeluaran.toLocaleString('id-ID')}`, width);
+  }
+  b.divider(width, '-');
+
+  // 4. DETAIL PRODUK TERJUAL
+  b.bold(true);
+  b.line('4. DETAIL PRODUK TERJUAL');
   b.bold(false);
   if (data.detail_produk_terjual.length === 0) {
     b.line('(Tidak ada produk terjual)');
@@ -668,22 +713,9 @@ export async function generateEscPosEodBytes(data: LaporanEodDataForPrint, width
   }
   b.divider(width, '-');
 
-  // 6. PENGELUARAN KEBUTUHAN
+  // 5. STOK FISIK BARANG BAWAAN
   b.bold(true);
-  b.line('RINCIAN PENGELUARAN');
-  b.bold(false);
-  if (data.laporan_pengeluaran.items.length === 0) {
-    b.line('(Tidak ada pengeluaran kebutuhan)');
-  } else {
-    for (const keb of data.laporan_pengeluaran.items) {
-      b.twoColumns(`${keb.nm_barang} (${keb.qty} pcs)`, `Rp ${keb.total_harga.toLocaleString('id-ID')}`, width);
-    }
-  }
-  b.divider(width, '-');
-
-  // 7. STOK FISIK BARANG BAWAAN
-  b.bold(true);
-  b.line('STOK FISIK BARANG BAWAAN');
+  b.line('5. STOK FISIK BARANG BAWAAN');
   b.bold(false);
   b.line('Bahan | Masuk - Kel - Ref = Sisa');
   if (data.laporan_barang_bawaan.length === 0) {

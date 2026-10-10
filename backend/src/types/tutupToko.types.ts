@@ -34,9 +34,27 @@ export interface LaporanPengeluaranDto {
   items: LaporanPengeluaranItemDto[];
 }
 
+export interface LaporanPengeluaranAkunItemDto {
+  id: number;
+  kd_gabungan?: string;
+  akun_id: number;
+  nm_akun: string;
+  ket?: string;
+  jumlah: number;
+  tgl: string;
+  created_at?: string;
+}
+
+export interface LaporanPengeluaranAkunDto {
+  total_pengeluaran: number;
+  items: LaporanPengeluaranAkunItemDto[];
+}
+
 export interface LaporanKasBersihDto {
   total_penjualan_cash: number;
   total_pengeluaran_kebutuhan: number;
+  total_pengeluaran_akun?: number;
+  total_pengeluaran?: number;
   kas_bersih: number;
 }
 
@@ -67,6 +85,7 @@ export interface RekapTokoResponseDto {
   laporan_penjualan: LaporanPenjualanItemDto[];
   detail_produk_terjual: DetailProdukTerjualItemDto[];
   laporan_pengeluaran: LaporanPengeluaranDto;
+  laporan_pengeluaran_akun: LaporanPengeluaranAkunDto;
   laporan_kas_bersih: LaporanKasBersihDto;
   laporan_barang_bawaan: LaporanBarangBawaanItemDto[];
 }

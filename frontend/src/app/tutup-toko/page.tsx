@@ -69,6 +69,16 @@ interface PengeluaranItem {
   tgl: string;
 }
 
+interface PengeluaranAkunItem {
+  id: number;
+  kd_gabungan?: string;
+  akun_id: number;
+  nm_akun: string;
+  ket?: string;
+  jumlah: number;
+  tgl: string;
+}
+
 interface BarangBawaanItem {
   bahan_id: number;
   nm_bahan: string;
@@ -254,11 +264,23 @@ export default function TutupTokoPage() {
     total_pengeluaran: number;
     items: PengeluaranItem[];
   }>({ total_pengeluaran: 0, items: [] });
+  const [laporanPengeluaranAkun, setLaporanPengeluaranAkun] = useState<{
+    total_pengeluaran: number;
+    items: PengeluaranAkunItem[];
+  }>({ total_pengeluaran: 0, items: [] });
   const [laporanKasBersih, setLaporanKasBersih] = useState<{
     total_penjualan_cash: number;
     total_pengeluaran_kebutuhan: number;
+    total_pengeluaran_akun?: number;
+    total_pengeluaran?: number;
     kas_bersih: number;
-  }>({ total_penjualan_cash: 0, total_pengeluaran_kebutuhan: 0, kas_bersih: 0 });
+  }>({
+    total_penjualan_cash: 0,
+    total_pengeluaran_kebutuhan: 0,
+    total_pengeluaran_akun: 0,
+    total_pengeluaran: 0,
+    kas_bersih: 0,
+  });
   const [laporanStok, setLaporanStok] = useState<BarangBawaanItem[]>([]);
 
   // Master Data Barang Kebutuhan untuk Form Dinamis
@@ -343,10 +365,13 @@ export default function TutupTokoPage() {
         setLaporanPenjualan(d.laporan_penjualan || []);
         setDetailProduk(d.detail_produk_terjual || []);
         setLaporanPengeluaran(d.laporan_pengeluaran || { total_pengeluaran: 0, items: [] });
+        setLaporanPengeluaranAkun(d.laporan_pengeluaran_akun || { total_pengeluaran: 0, items: [] });
         setLaporanKasBersih(
           d.laporan_kas_bersih || {
             total_penjualan_cash: 0,
             total_pengeluaran_kebutuhan: 0,
+            total_pengeluaran_akun: 0,
+            total_pengeluaran: 0,
             kas_bersih: 0,
           }
         );
@@ -585,9 +610,22 @@ export default function TutupTokoPage() {
           total_harga: it.total_harga,
         })),
       },
+      laporan_pengeluaran_akun: {
+        total_pengeluaran: laporanPengeluaranAkun.total_pengeluaran,
+        items: laporanPengeluaranAkun.items.map((it) => ({
+          nm_akun: it.nm_akun,
+          ket: it.ket,
+          jumlah: it.jumlah,
+        })),
+      },
       laporan_kas_bersih: {
         total_penjualan_cash: laporanKasBersih.total_penjualan_cash,
         total_pengeluaran_kebutuhan: laporanKasBersih.total_pengeluaran_kebutuhan,
+        total_pengeluaran_akun: laporanKasBersih.total_pengeluaran_akun || 0,
+        total_pengeluaran:
+          laporanKasBersih.total_pengeluaran ??
+          (laporanKasBersih.total_pengeluaran_kebutuhan +
+            (laporanKasBersih.total_pengeluaran_akun || 0)),
         kas_bersih: laporanKasBersih.kas_bersih,
       },
       laporan_barang_bawaan: laporanStok.map((st) => ({
@@ -765,10 +803,10 @@ export default function TutupTokoPage() {
                   <div className="text-3xl sm:text-4xl font-black tracking-tight mt-2">
                     Rp {laporanKasBersih.kas_bersih.toLocaleString('id-ID')}
                   </div>
-                  <p className="text-[11px] text-emerald-100/90 mt-2 font-medium flex items-center gap-1.5">
+                  <p className="text-[11px] text-emerald-100/90 mt-2 font-medium flex items-center gap-1.5 flex-wrap">
                     <span>(Total Penjualan Cash: Rp {laporanKasBersih.total_penjualan_cash.toLocaleString('id-ID')})</span>
                     <span>&minus;</span>
-                    <span>(Pengeluaran: Rp {laporanKasBersih.total_pengeluaran_kebutuhan.toLocaleString('id-ID')})</span>
+                    <span>(Pengeluaran: Rp {(laporanKasBersih.total_pengeluaran ?? (laporanKasBersih.total_pengeluaran_kebutuhan + (laporanKasBersih.total_pengeluaran_akun || 0))).toLocaleString('id-ID')})</span>
                   </p>
                 </div>
                 <div className="absolute right-[-20px] bottom-[-20px] opacity-15 pointer-events-none">
@@ -792,28 +830,39 @@ export default function TutupTokoPage() {
                 </p>
               </div>
 
-              {/* Total Pengeluaran Kebutuhan */}
+              {/* Total Pengeluaran (Kebutuhan & Akun) */}
               <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col justify-between">
                 <div>
                   <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 mb-1">
-                    <span className="text-xs font-bold uppercase tracking-wider">Pengeluaran Kebutuhan</span>
+                    <span className="text-xs font-bold uppercase tracking-wider">Pengeluaran Kebutuhan & Akun</span>
                     <ShoppingBag className="w-4 h-4 text-rose-500" />
                   </div>
                   <div className="text-xl sm:text-2xl font-black text-rose-600 dark:text-rose-400 mt-1">
-                    Rp {laporanKasBersih.total_pengeluaran_kebutuhan.toLocaleString('id-ID')}
+                    Rp {(laporanKasBersih.total_pengeluaran ?? (laporanKasBersih.total_pengeluaran_kebutuhan + (laporanKasBersih.total_pengeluaran_akun || 0))).toLocaleString('id-ID')}
                   </div>
                 </div>
-                <p className="text-[11px] text-slate-400 mt-3">
-                  {laporanPengeluaran.items.length} transaksi barang kebutuhan
-                </p>
+                <div className="text-[11px] text-slate-400 mt-3 space-y-0.5">
+                  <div className="flex justify-between">
+                    <span>Kebutuhan ({laporanPengeluaran.items.length} trx):</span>
+                    <span className="font-semibold text-slate-600 dark:text-slate-300">
+                      Rp {laporanKasBersih.total_pengeluaran_kebutuhan.toLocaleString('id-ID')}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Akun ({laporanPengeluaranAkun.items.length} trx):</span>
+                    <span className="font-semibold text-slate-600 dark:text-slate-300">
+                      Rp {(laporanKasBersih.total_pengeluaran_akun || 0).toLocaleString('id-ID')}
+                    </span>
+                  </div>
+                </div>
               </div>
             </div>
 
             {/* ================================================================= */}
-            {/* CARD 2 & 3: LAPORAN PENJUALAN & DETAIL PRODUK TERJUAL              */}
+            {/* DETAIL LAPORAN 1 & 2: PENJUALAN & PENGELUARAN AKUN                 */}
             {/* ================================================================= */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Laporan Penjualan (Group by Delivery & Pembayaran) */}
+              {/* 1. Laporan Penjualan (Group by Delivery & Pembayaran) */}
               <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col">
                 <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800 mb-3">
                   <div className="flex items-center gap-2">
@@ -827,9 +876,9 @@ export default function TutupTokoPage() {
                   </span>
                 </div>
 
-                <div className="flex-1 overflow-x-auto">
+                <div className="flex-1 overflow-x-auto max-h-72 overflow-y-auto">
                   <table className="w-full text-xs text-left">
-                    <thead>
+                    <thead className="sticky top-0 bg-white dark:bg-slate-900">
                       <tr className="border-b border-slate-200 dark:border-slate-800 text-slate-400 font-semibold uppercase">
                         <th className="py-2 px-1">Channel</th>
                         <th className="py-2 px-1">Pembayaran</th>
@@ -885,13 +934,146 @@ export default function TutupTokoPage() {
                 </div>
               </div>
 
-              {/* Detail Produk Terjual */}
+              {/* 2. Laporan Pengeluaran Akun */}
+              <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col">
+                <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800 mb-3">
+                  <div className="flex items-center gap-2">
+                    <Receipt className="w-4 h-4 text-amber-500" />
+                    <h2 className="text-sm font-bold text-slate-900 dark:text-white">
+                      2. Laporan Pengeluaran Akun
+                    </h2>
+                  </div>
+                  <span className="text-xs font-bold text-rose-500 font-mono">
+                    Total: Rp {laporanPengeluaranAkun.total_pengeluaran.toLocaleString('id-ID')}
+                  </span>
+                </div>
+
+                <div className="flex-1 overflow-x-auto max-h-72 overflow-y-auto">
+                  <table className="w-full text-xs text-left">
+                    <thead className="sticky top-0 bg-white dark:bg-slate-900">
+                      <tr className="border-b border-slate-200 dark:border-slate-800 text-slate-400 font-semibold uppercase">
+                        <th className="py-2 px-1">Nama Akun</th>
+                        <th className="py-2 px-1">Keterangan</th>
+                        <th className="py-2 px-1 text-right">Jumlah</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 font-medium">
+                      {laporanPengeluaranAkun.items.length === 0 ? (
+                        <tr>
+                          <td colSpan={3} className="py-6 text-center text-slate-400 italic">
+                            Tidak ada catatan pengeluaran akun pada sesi ini.
+                          </td>
+                        </tr>
+                      ) : (
+                        laporanPengeluaranAkun.items.map((it, idx) => (
+                          <tr key={`pa-${it.id || idx}`} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/40">
+                            <td className="py-2 px-1 font-semibold text-slate-800 dark:text-slate-200">
+                              {it.nm_akun}
+                            </td>
+                            <td className="py-2 px-1 text-slate-600 dark:text-slate-400">
+                              {it.ket || '-'}
+                            </td>
+                            <td className="py-2 px-1 text-right font-mono font-bold text-rose-600 dark:text-rose-400">
+                              Rp {it.jumlah.toLocaleString('id-ID')}
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                    {laporanPengeluaranAkun.items.length > 0 && (
+                      <tfoot>
+                        <tr className="border-t-2 border-slate-200 dark:border-slate-700 font-bold text-slate-900 dark:text-white">
+                          <td colSpan={2} className="py-2.5 px-1 uppercase tracking-wider">
+                            Total Pengeluaran Akun
+                          </td>
+                          <td className="py-2.5 px-1 text-right font-mono text-rose-600 dark:text-rose-400">
+                            Rp {laporanPengeluaranAkun.total_pengeluaran.toLocaleString('id-ID')}
+                          </td>
+                        </tr>
+                      </tfoot>
+                    )}
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            {/* ================================================================= */}
+            {/* DETAIL LAPORAN 3 & 4: PENGELUARAN KEBUTUHAN & PRODUK TERJUAL        */}
+            {/* ================================================================= */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* 3. Laporan Pengeluaran Kebutuhan */}
+              <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col">
+                <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800 mb-3">
+                  <div className="flex items-center gap-2">
+                    <Layers className="w-4 h-4 text-amber-500" />
+                    <h2 className="text-sm font-bold text-slate-900 dark:text-white">
+                      3. Laporan Pengeluaran Kebutuhan
+                    </h2>
+                  </div>
+                  <span className="text-xs font-bold text-rose-500 font-mono">
+                    Total: Rp {laporanPengeluaran.total_pengeluaran.toLocaleString('id-ID')}
+                  </span>
+                </div>
+
+                <div className="flex-1 overflow-x-auto max-h-72 overflow-y-auto">
+                  <table className="w-full text-xs text-left">
+                    <thead className="sticky top-0 bg-white dark:bg-slate-900">
+                      <tr className="border-b border-slate-200 dark:border-slate-800 text-slate-400 font-semibold uppercase">
+                        <th className="py-2 px-1">Barang</th>
+                        <th className="py-2 px-1 text-center">Qty</th>
+                        <th className="py-2 px-1 text-right">Harga Satuan</th>
+                        <th className="py-2 px-1 text-right">Total</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 font-medium">
+                      {laporanPengeluaran.items.length === 0 ? (
+                        <tr>
+                          <td colSpan={4} className="py-6 text-center text-slate-400 italic">
+                            Tidak ada catatan pengeluaran kebutuhan pada sesi ini.
+                          </td>
+                        </tr>
+                      ) : (
+                        laporanPengeluaran.items.map((it) => (
+                          <tr key={`pk-${it.id}`} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/40">
+                            <td className="py-2 px-1 font-semibold text-slate-800 dark:text-slate-200">
+                              {it.nm_barang}
+                            </td>
+                            <td className="py-2 px-1 text-center font-mono font-bold">
+                              {it.qty}
+                            </td>
+                            <td className="py-2 px-1 text-right font-mono text-slate-500">
+                              Rp {it.harga_satuan.toLocaleString('id-ID')}
+                            </td>
+                            <td className="py-2 px-1 text-right font-mono font-bold text-rose-600 dark:text-rose-400">
+                              Rp {it.total_harga.toLocaleString('id-ID')}
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                    {laporanPengeluaran.items.length > 0 && (
+                      <tfoot>
+                        <tr className="border-t-2 border-slate-200 dark:border-slate-700 font-bold text-slate-900 dark:text-white">
+                          <td colSpan={3} className="py-2.5 px-1 uppercase tracking-wider">
+                            Total Pengeluaran Kebutuhan
+                          </td>
+                          <td className="py-2.5 px-1 text-right font-mono text-rose-600 dark:text-rose-400">
+                            Rp {laporanPengeluaran.total_pengeluaran.toLocaleString('id-ID')}
+                          </td>
+                        </tr>
+                      </tfoot>
+                    )}
+                  </table>
+                </div>
+              </div>
+
+              {/* 4. Detail Produk Terjual */}
               <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col">
                 <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800 mb-3">
                   <div className="flex items-center gap-2">
                     <Package className="w-4 h-4 text-amber-500" />
                     <h2 className="text-sm font-bold text-slate-900 dark:text-white">
-                      2. Detail Produk Terjual
+                      4. Detail Produk Terjual
                     </h2>
                   </div>
                   <span className="text-xs font-semibold text-slate-500">
@@ -943,70 +1125,16 @@ export default function TutupTokoPage() {
             </div>
 
             {/* ================================================================= */}
-            {/* CARD 4 & 5: LAPORAN PENGELUARAN & BARANG BAWAAN (STOK FISIK)       */}
+            {/* DETAIL LAPORAN 5: BARANG BAWAAN (STOK FISIK)                      */}
             {/* ================================================================= */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Laporan Pengeluaran Kebutuhan */}
-              <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col">
-                <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800 mb-3">
-                  <div className="flex items-center gap-2">
-                    <Layers className="w-4 h-4 text-amber-500" />
-                    <h2 className="text-sm font-bold text-slate-900 dark:text-white">
-                      3. Laporan Pengeluaran Kebutuhan
-                    </h2>
-                  </div>
-                  <span className="text-xs font-bold text-rose-500 font-mono">
-                    Total: Rp {laporanPengeluaran.total_pengeluaran.toLocaleString('id-ID')}
-                  </span>
-                </div>
-
-                <div className="flex-1 overflow-x-auto max-h-64 overflow-y-auto">
-                  <table className="w-full text-xs text-left">
-                    <thead className="sticky top-0 bg-white dark:bg-slate-900">
-                      <tr className="border-b border-slate-200 dark:border-slate-800 text-slate-400 font-semibold uppercase">
-                        <th className="py-2 px-1">Barang</th>
-                        <th className="py-2 px-1 text-center">Qty</th>
-                        <th className="py-2 px-1 text-right">Harga Satuan</th>
-                        <th className="py-2 px-1 text-right">Total</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 font-medium">
-                      {laporanPengeluaran.items.length === 0 ? (
-                        <tr>
-                          <td colSpan={4} className="py-6 text-center text-slate-400 italic">
-                            Tidak ada catatan pengeluaran kebutuhan pada sesi ini.
-                          </td>
-                        </tr>
-                      ) : (
-                        laporanPengeluaran.items.map((it) => (
-                          <tr key={`pk-${it.id}`} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/40">
-                            <td className="py-2 px-1 font-semibold text-slate-800 dark:text-slate-200">
-                              {it.nm_barang}
-                            </td>
-                            <td className="py-2 px-1 text-center font-mono font-bold">
-                              {it.qty}
-                            </td>
-                            <td className="py-2 px-1 text-right font-mono text-slate-500">
-                              Rp {it.harga_satuan.toLocaleString('id-ID')}
-                            </td>
-                            <td className="py-2 px-1 text-right font-mono font-bold text-rose-600 dark:text-rose-400">
-                              Rp {it.total_harga.toLocaleString('id-ID')}
-                            </td>
-                          </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              {/* Laporan Barang Bawaan (Stok Fisik: Masuk - Keluar - Refund) */}
+            <div className="grid grid-cols-1 gap-6">
+              {/* 5. Laporan Barang Bawaan (Stok Fisik: Masuk - Keluar - Refund) */}
               <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col">
                 <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800 mb-3">
                   <div className="flex items-center gap-2">
                     <Package className="w-4 h-4 text-amber-500" />
                     <h2 className="text-sm font-bold text-slate-900 dark:text-white">
-                      4. Laporan Barang Bawaan (Stok Fisik)
+                      5. Laporan Barang Bawaan (Stok Fisik)
                     </h2>
                   </div>
                   <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
@@ -1622,9 +1750,9 @@ export default function TutupTokoPage() {
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-500">Pengeluaran:</span>
+                <span className="text-slate-500">Total Pengeluaran:</span>
                 <span className="font-mono font-bold text-rose-500">
-                  Rp {laporanKasBersih.total_pengeluaran_kebutuhan.toLocaleString('id-ID')}
+                  Rp {(laporanKasBersih.total_pengeluaran ?? (laporanKasBersih.total_pengeluaran_kebutuhan + (laporanKasBersih.total_pengeluaran_akun || 0))).toLocaleString('id-ID')}
                 </span>
               </div>
             </div>
