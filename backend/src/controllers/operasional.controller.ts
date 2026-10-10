@@ -39,22 +39,10 @@ export class OperasionalController {
 
       const { buka_toko_id, kota_id, tgl, karyawan_baru, karyawan_baru_ids } = req.body;
 
-      // Opsi A (Wajib Selfie): Validasi bahwa setiap karyawan baru wajib memiliki foto selfie
+      // Validasi input karyawan shift baru
       if (Array.isArray(karyawan_baru)) {
         if (karyawan_baru.length === 0) {
           return errorResponse(res, 'Pilih minimal satu karyawan untuk shift baru.', 400);
-        }
-
-        // Cek apakah ada karyawan yang belum mengambil foto selfie
-        const missingFoto = karyawan_baru.some(
-          (k: any) => !k.foto || typeof k.foto !== 'string' || k.foto.trim() === ''
-        );
-        if (missingFoto) {
-          return errorResponse(
-            res,
-            'Seluruh karyawan shift baru wajib mengambil foto selfie wajah sebelum disimpan.',
-            400
-          );
         }
       } else if (!Array.isArray(karyawan_baru_ids) || karyawan_baru_ids.length === 0) {
         return errorResponse(res, 'Pilih minimal satu karyawan untuk shift baru.', 400);

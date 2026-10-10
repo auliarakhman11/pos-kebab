@@ -1,6 +1,7 @@
 export interface KaryawanGantiShiftItemDto {
   karyawan_id: number;
-  foto: string;
+  foto?: string | null;
+  is_ganti_foto?: boolean;
 }
 
 export interface GantiShiftRequestDto {
@@ -51,5 +52,14 @@ export interface StatusOperasionalDto {
     nama: string;
     ganti: number;
     foto?: string | null;
+  }>;
+  karyawan_sesi_ini: Array<{
+    id: number;
+    karyawan_id: number;
+    nama: string;
+    ganti: number;
+    foto?: string | null;
+    created_at?: string | null;
+    updated_at?: string | null;
   }>;
 }

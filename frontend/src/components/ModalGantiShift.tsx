@@ -12,7 +12,6 @@ import {
   Camera,
   RefreshCw,
   CheckCircle2,
-  Image as ImageIcon,
 } from 'lucide-react';
 import api from '@/lib/api';
 
@@ -22,12 +21,21 @@ interface Karyawan {
   kota_id?: number;
 }
 
+export interface KaryawanSesiItem {
+  id?: number;
+  karyawan_id: number;
+  nama?: string;
+  ganti?: number;
+  foto?: string | null;
+}
+
 interface ModalGantiShiftProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess?: () => void;
   currentKaryawanIds?: number[];
   bukaTokoId?: number | null;
+  karyawanSesiIni?: KaryawanSesiItem[];
 }
 
 export default function ModalGantiShift({
@@ -36,6 +44,7 @@ export default function ModalGantiShift({
   onSuccess,
   currentKaryawanIds = [],
   bukaTokoId,
+  karyawanSesiIni = [],
 }: ModalGantiShiftProps) {
   const [karyawanList, setKaryawanList] = useState<Karyawan[]>([]);
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
@@ -45,8 +54,11 @@ export default function ModalGantiShift({
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
-  // State Foto Selfie per Karyawan: Map karyawan_id -> Base64 dataUrl
+  // State Foto Selfie per Karyawan: Map karyawan_id -> Base64 / URL path
   const [selfieMap, setSelfieMap] = useState<Record<number, string>>({});
+
+  // Penanda apakah foto berasal dari data Buka Toko (existing) atau baru dijepret ulang
+  const [isExistingPhoto, setIsExistingPhoto] = useState<Record<number, boolean>>({});
 
   // State Modal Kamera Live Viewfinder
   const [activeCameraKaryawan, setActiveCameraKaryawan] = useState<Karyawan | null>(null);
@@ -57,7 +69,7 @@ export default function ModalGantiShift({
   const streamRef = useRef<MediaStream | null>(null);
   const nativeFileInputRef = useRef<HTMLInputElement | null>(null);
 
-  // Load master karyawan aktif saat modal dibuka
+  // Load master karyawan aktif saat modal dibuka & inisialisasi foto yang sudah ada
   useEffect(() => {
     if (!isOpen) return;
 
@@ -65,9 +77,24 @@ export default function ModalGantiShift({
     setSuccessMsg(null);
     setSearchQuery('');
     setSelectedIds(currentKaryawanIds.length > 0 ? [...currentKaryawanIds] : []);
-    setSelfieMap({});
     setActiveCameraKaryawan(null);
     setCapturedSnapshot('');
+
+    // Inisialisasi foto dari sesi buka toko saat ini (jika pegawai sudah selfie saat buka toko)
+    const initialSelfieMap: Record<number, string> = {};
+    const initialExistingMap: Record<number, boolean> = {};
+
+    if (Array.isArray(karyawanSesiIni)) {
+      for (const item of karyawanSesiIni) {
+        if (item.foto && typeof item.foto === 'string') {
+          initialSelfieMap[item.karyawan_id] = item.foto;
+          initialExistingMap[item.karyawan_id] = true;
+        }
+      }
+    }
+
+    setSelfieMap(initialSelfieMap);
+    setIsExistingPhoto(initialExistingMap);
 
     const fetchKaryawan = async () => {
       setLoading(true);
@@ -87,7 +114,7 @@ export default function ModalGantiShift({
     };
 
     fetchKaryawan();
-  }, [isOpen, currentKaryawanIds]);
+  }, [isOpen, currentKaryawanIds, karyawanSesiIni]);
 
   // Bersihkan stream kamera saat modal ditutup
   useEffect(() => {
@@ -105,7 +132,6 @@ export default function ModalGantiShift({
     setSelectedIds((prev) => {
       const isSelected = prev.includes(id);
       if (isSelected) {
-        // Jika uncheck, kita biarkan atau hapus dari selfieMap
         return prev.filter((item) => item !== id);
       } else {
         return [...prev, id];
@@ -187,13 +213,19 @@ export default function ModalGantiShift({
     }
   };
 
-  // Konfirmasi & Gunakan Foto Snapshot
+  // Konfirmasi & Gunakan Foto Snapshot Baru
   const confirmCapturedPhoto = () => {
     if (!capturedSnapshot || !activeCameraKaryawan) return;
 
     setSelfieMap((prev) => ({
       ...prev,
       [activeCameraKaryawan.id]: capturedSnapshot,
+    }));
+
+    // Ditandai sebagai foto baru (bukan foto lama)
+    setIsExistingPhoto((prev) => ({
+      ...prev,
+      [activeCameraKaryawan.id]: false,
     }));
 
     closeCameraModal();
@@ -235,15 +267,18 @@ export default function ModalGantiShift({
           ...prev,
           [activeCameraKaryawan.id]: base64,
         }));
+        setIsExistingPhoto((prev) => ({
+          ...prev,
+          [activeCameraKaryawan.id]: false,
+        }));
         closeCameraModal();
       }
     };
     reader.readAsDataURL(file);
-    // Reset file input agar bisa dipilih ulang jika perlu
     e.target.value = '';
   };
 
-  // Hitung Karyawan Terpilih yang Belum Mengambil Foto Selfie
+  // Hitung Karyawan Terpilih yang Belum Memiliki Foto Selfie
   const missingSelfieIds = selectedIds.filter((id) => !selfieMap[id]);
   const isAllSelfieReady = selectedIds.length > 0 && missingSelfieIds.length === 0;
 
@@ -256,7 +291,7 @@ export default function ModalGantiShift({
 
     if (missingSelfieIds.length > 0) {
       setErrorMsg(
-        `Masih ada ${missingSelfieIds.length} petugas yang belum mengambil foto selfie wajah. Semua petugas shift baru wajib berselfie (Opsi A).`
+        `Masih ada ${missingSelfieIds.length} petugas yang belum memiliki foto selfie wajah. Semua petugas shift baru wajib berselfie.`
       );
       return;
     }
@@ -270,7 +305,10 @@ export default function ModalGantiShift({
         buka_toko_id: bukaTokoId || undefined,
         karyawan_baru: selectedIds.map((id) => ({
           karyawan_id: id,
-          foto: selfieMap[id],
+          // Jika menggunakan foto lama buka toko, kirim null dan is_ganti_foto = false
+          // Jika mengambil foto baru, kirim string base64 dan is_ganti_foto = true
+          foto: isExistingPhoto[id] ? null : selfieMap[id],
+          is_ganti_foto: !isExistingPhoto[id],
         })),
         karyawan_baru_ids: selectedIds,
       };
@@ -278,7 +316,7 @@ export default function ModalGantiShift({
       const res = await api.post('/ganti-shift', payload);
 
       if (res.data?.success) {
-        setSuccessMsg('Pergantian shift & selfie petugas berhasil disimpan!');
+        setSuccessMsg('Pergantian shift & status petugas berhasil disimpan!');
         setTimeout(() => {
           onSuccess?.();
           onClose();
@@ -323,7 +361,7 @@ export default function ModalGantiShift({
                   <span>Pergantian Shift Petugas</span>
                 </h3>
                 <p className="text-xs text-slate-400 dark:text-slate-500">
-                  Pilih petugas baru dan ambil foto selfie wajah masing-masing (Wajib Selfie).
+                  Pilih petugas shift baru. Petugas yang sudah selfie saat Buka Toko otomatis menggunakan foto yang tersimpan.
                 </p>
               </div>
             </div>
@@ -353,13 +391,13 @@ export default function ModalGantiShift({
               </div>
             )}
 
-            {/* PANDUAN WAJIB SELFIE */}
+            {/* PANDUAN EFISIENSI FOTO & ABSENSI */}
             <div className="bg-amber-50/70 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 p-3 rounded-2xl flex items-start gap-2.5 text-xs text-amber-800 dark:text-amber-300">
               <Camera className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
               <div>
-                <span className="font-bold">Mekanisme Opsi A (Wajib Selfie):</span>
+                <span className="font-bold">Mekanisme Foto & Jam Absen:</span>
                 <p className="text-[11px] text-amber-700/90 dark:text-amber-400/90 mt-0.5 leading-relaxed">
-                  Setiap petugas yang dicentang wajib mengambil foto selfie wajah melalui tombol kamera di samping namanya sebelum pergantian shift dapat disimpan.
+                  Pegawai yang sudah berselfie saat Buka Toko otomatis siap tanpa perlu selfie ulang. Petugas baru wajib mengambil selfie wajah.
                 </p>
               </div>
             </div>
@@ -394,6 +432,7 @@ export default function ModalGantiShift({
                   const isSelected = selectedIds.includes(karyawan.id);
                   const hasSelfie = Boolean(selfieMap[karyawan.id]);
                   const selfieImg = selfieMap[karyawan.id];
+                  const isExisting = Boolean(isExistingPhoto[karyawan.id]);
 
                   return (
                     <div
@@ -459,7 +498,7 @@ export default function ModalGantiShift({
                             <>
                               <div className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 text-[10px] font-bold border border-emerald-200 dark:border-emerald-800">
                                 <CheckCircle2 className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
-                                <span>Selfie Siap</span>
+                                <span>{isExisting ? 'Foto Buka Toko' : 'Selfie Siap'}</span>
                               </div>
                               <button
                                 type="button"
@@ -544,7 +583,7 @@ export default function ModalGantiShift({
               {submitting ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>Menyimpan Shift & Foto...</span>
+                  <span>Menyimpan Shift...</span>
                 </>
               ) : (
                 <>

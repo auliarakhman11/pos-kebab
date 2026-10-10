@@ -122,8 +122,8 @@ export default function KasirPOSPage() {
     is_kebutuhan_enabled: boolean;
     buka_toko_id: number | null;
     kode_buka_toko: string | null;
-    tgl_buka_toko: string | null;
-    karyawan_jaga: Array<{ id: number; karyawan_id: number; nama: string; ganti: number }>;
+    karyawan_jaga: Array<{ id: number; karyawan_id: number; nama: string; ganti: number; foto?: string | null }>;
+    karyawan_sesi_ini?: Array<{ id: number; karyawan_id: number; nama: string; ganti: number; foto?: string | null }>;
   } | null>(null);
 
   // Modul 6: Offline-First States (Dexie.js)
@@ -1682,6 +1682,7 @@ export default function KasirPOSPage() {
         onSuccess={fetchStatusOperasional}
         bukaTokoId={statusOperasional?.buka_toko_id}
         currentKaryawanIds={(statusOperasional?.karyawan_jaga || []).map((j) => j.karyawan_id)}
+        karyawanSesiIni={statusOperasional?.karyawan_sesi_ini || []}
       />
 
       {/* ========================================================================= */}

@@ -533,6 +533,19 @@ export class TutupTokoService {
           },
         });
 
+        // D. Nonaktifkan seluruh shift pegawai yang saat ini masih aktif (ganti = 0) pada sesi buka toko ini
+        // dan set updated_at = zonaWaktu sebagai catatan resmi waktu Clock-Out saat toko tutup
+        await tx.jagaOutlet.updateMany({
+          where: {
+            buka_toko_id: BigInt(bukaTokoId),
+            ganti: 0,
+          },
+          data: {
+            ganti: 1,
+            updated_at: zonaWaktu,
+          },
+        });
+
         return updatedBukaToko;
       },
       {

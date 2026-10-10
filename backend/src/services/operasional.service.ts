@@ -45,7 +45,6 @@ export class OperasionalService {
       orderBy: { id: 'desc' },
       include: {
         jagaOutlet: {
-          where: { ganti: 0 },
           include: {
             karyawan: {
               select: { id: true, nama: true },
@@ -55,13 +54,17 @@ export class OperasionalService {
       },
     });
 
-    const karyawanJaga = (activeBukaToko?.jagaOutlet || []).map((j) => ({
+    const allJagaSesi = (activeBukaToko?.jagaOutlet || []).map((j) => ({
       id: Number(j.id),
       karyawan_id: j.karyawan_id,
       nama: j.karyawan?.nama || 'Petugas',
       ganti: j.ganti,
       foto: j.foto ? (j.foto.startsWith('http') || j.foto.startsWith('/') ? j.foto : `/img_kry/${j.foto}`) : null,
+      created_at: j.created_at ? j.created_at.toISOString() : null,
+      updated_at: j.updated_at ? j.updated_at.toISOString() : null,
     }));
+
+    const karyawanJaga = allJagaSesi.filter((j) => j.ganti === 0);
 
     return {
       cabang_id: cabangId,
@@ -72,17 +75,19 @@ export class OperasionalService {
       kode_buka_toko: activeBukaToko?.kode || null,
       tgl_buka_toko: activeBukaToko ? activeBukaToko.tgl.toISOString().split('T')[0] : null,
       karyawan_jaga: karyawanJaga,
+      karyawan_sesi_ini: allJagaSesi,
     };
   }
 
   /**
    * POST /api/ganti-shift
    * Memperbarui daftar petugas shift aktif secara atomik ($transaction):
-   * 1. Set ganti = 1 pada semua entri jaga_outlet di buka_toko_id ini (mengakhiri shift lama)
-   * 2. Loop karyawan_baru_ids:
-   *    - Jika sudah ada: update ganti = 0
-   *    - Jika belum ada: insert baru (role = 3, ganti = 0)
-   * 3. Sinkronkan nama karyawan aktif ke buka_toko.nm_karyawan
+   * 1. Nonaktifkan hanya pegawai yang sebelumnya aktif (ganti=0) dan sekarang tidak dipilih: set ganti=1, updated_at=sekarang (Clock Out).
+   * 2. Pegawai yang tetap bertugas / aktif kembali:
+   *    - Jika tidak ganti foto: ganti=0, updated_at TETAP, created_at TETAP.
+   *    - Jika ganti foto: ganti=0, foto baru disimpan, updated_at=sekarang.
+   * 3. Pegawai baru (belum pernah ada di sesi ini): wajib selfie, insert baru dengan created_at & updated_at=sekarang.
+   * 4. Sinkronkan nama karyawan aktif ke buka_toko.nm_karyawan.
    */
   async gantiShift(cabangId: number, adminId: number, payload: GantiShiftRequestDto) {
     const { karyawan_baru, karyawan_baru_ids } = payload;
@@ -180,34 +185,35 @@ export class OperasionalService {
     // Eksekusi atomik $transaction
     const result = await prisma.$transaction(
       async (tx) => {
-        // 1. Update semua data di tabel jaga_outlet yang memiliki buka_toko_id tersebut. Set ganti = 1
-        await tx.jagaOutlet.updateMany({
+        // 1. Dapatkan daftar pegawai yang saat ini sedang aktif (ganti = 0)
+        const currentlyActive = await tx.jagaOutlet.findMany({
           where: {
             buka_toko_id: BigInt(bukaTokoId),
-          },
-          data: {
-            ganti: 1,
-            updated_at: zonaWaktu,
+            ganti: 0,
           },
         });
 
-        // 2. Looping karyawan shift baru & simpan foto selfie masing-masing
+        // Pegawai yang sebelumnya aktif tapi TIDAK DIPILIH LAGI (diberhentikan dari shift)
+        const decommissionedIds = currentlyActive
+          .filter((j) => !cleanKaryawanIds.includes(j.karyawan_id))
+          .map((j) => j.id);
+
+        if (decommissionedIds.length > 0) {
+          // Set ganti = 1 dan update updated_at = zonaWaktu (mencatat waktu resmi Clock-Out diberhentikan dari shift)
+          await tx.jagaOutlet.updateMany({
+            where: {
+              id: { in: decommissionedIds },
+            },
+            data: {
+              ganti: 1,
+              updated_at: zonaWaktu,
+            },
+          });
+        }
+
+        // 2. Looping karyawan shift baru yang dipilih
         for (const item of cleanKaryawanEntries) {
           const kId = item.karyawan_id;
-          let fotoFileName: string | null = null;
-
-          // Simpan foto selfie jika berformat base64 (data:image/...)
-          if (item.foto && typeof item.foto === 'string') {
-            if (item.foto.startsWith('data:')) {
-              const rand2 =
-                chars.charAt(Math.floor(Math.random() * chars.length)) +
-                chars.charAt(Math.floor(Math.random() * chars.length));
-              const generatedName = `new_kry_${bukaTokoId}_${kId}_${rand2}.jpg`;
-              fotoFileName = saveBase64Image(item.foto, 'img_kry', generatedName) || generatedName;
-            } else {
-              fotoFileName = item.foto;
-            }
-          }
 
           const existing = await tx.jagaOutlet.findFirst({
             where: {
@@ -217,17 +223,46 @@ export class OperasionalService {
           });
 
           if (existing) {
-            // Jika SUDAH ADA: Update field ganti = 0 (aktifkan kembali) & perbarui foto jika ada
+            // A. PEGAWAI SUDAH ADA (terdaftar di sesi buka toko ini)
+            // Cek apakah pegawai mengambil foto selfie baru (format base64 data:image/...)
+            const isGantiFoto =
+              item.foto && typeof item.foto === 'string' && item.foto.startsWith('data:');
+
+            let fotoFileName = existing.foto;
+            if (isGantiFoto) {
+              const rand2 =
+                chars.charAt(Math.floor(Math.random() * chars.length)) +
+                chars.charAt(Math.floor(Math.random() * chars.length));
+              const generatedName = `new_kry_${bukaTokoId}_${kId}_${rand2}.jpg`;
+              fotoFileName = saveBase64Image(item.foto!, 'img_kry', generatedName) || generatedName;
+            }
+
+            // Jika GANTI FOTO: perbarui foto dan update updated_at = sekarang
+            // Jika TIDAK GANTI FOTO: updated_at TETAP utuh, created_at TETAP utuh
             await tx.jagaOutlet.update({
               where: { id: existing.id },
               data: {
                 ganti: 0,
-                ...(fotoFileName ? { foto: fotoFileName } : {}),
-                updated_at: zonaWaktu,
+                ...(isGantiFoto ? { foto: fotoFileName, updated_at: zonaWaktu } : {}),
               },
             });
           } else {
-            // Jika BELUM ADA: Insert baru ke jaga_outlet
+            // B. PEGAWAI BARU (belum pernah tercatat di sesi buka toko ini)
+            // Pegawai baru wajib menyertakan foto selfie wajah
+            if (!item.foto || typeof item.foto !== 'string' || !item.foto.startsWith('data:')) {
+              const error: any = new Error(
+                `Petugas baru (ID #${kId}) wajib mengambil foto selfie wajah sebelum disimpan.`
+              );
+              error.statusCode = 400;
+              throw error;
+            }
+
+            const rand2 =
+              chars.charAt(Math.floor(Math.random() * chars.length)) +
+              chars.charAt(Math.floor(Math.random() * chars.length));
+            const generatedName = `new_kry_${bukaTokoId}_${kId}_${rand2}.jpg`;
+            const fotoFileName = saveBase64Image(item.foto, 'img_kry', generatedName) || generatedName;
+
             await tx.jagaOutlet.create({
               data: {
                 buka_toko_id: BigInt(bukaTokoId),
@@ -237,8 +272,8 @@ export class OperasionalService {
                 role: 3, // Role 3 = MS / Anggota
                 tgl: tglTransaksi,
                 ganti: 0,
-                foto: fotoFileName || null,
-                created_at: zonaWaktu,
+                foto: fotoFileName,
+                created_at: zonaWaktu, // Waktu absen masuk pertama kali
                 updated_at: zonaWaktu,
               },
             });
