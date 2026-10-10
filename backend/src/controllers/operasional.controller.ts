@@ -37,9 +37,26 @@ export class OperasionalController {
         return errorResponse(res, 'Sesi tidak valid: Cabang atau kasir tidak ditemukan.', 401);
       }
 
-      const { buka_toko_id, kota_id, tgl, karyawan_baru_ids } = req.body;
+      const { buka_toko_id, kota_id, tgl, karyawan_baru, karyawan_baru_ids } = req.body;
 
-      if (!Array.isArray(karyawan_baru_ids) || karyawan_baru_ids.length === 0) {
+      // Opsi A (Wajib Selfie): Validasi bahwa setiap karyawan baru wajib memiliki foto selfie
+      if (Array.isArray(karyawan_baru)) {
+        if (karyawan_baru.length === 0) {
+          return errorResponse(res, 'Pilih minimal satu karyawan untuk shift baru.', 400);
+        }
+
+        // Cek apakah ada karyawan yang belum mengambil foto selfie
+        const missingFoto = karyawan_baru.some(
+          (k: any) => !k.foto || typeof k.foto !== 'string' || k.foto.trim() === ''
+        );
+        if (missingFoto) {
+          return errorResponse(
+            res,
+            'Seluruh karyawan shift baru wajib mengambil foto selfie wajah sebelum disimpan.',
+            400
+          );
+        }
+      } else if (!Array.isArray(karyawan_baru_ids) || karyawan_baru_ids.length === 0) {
         return errorResponse(res, 'Pilih minimal satu karyawan untuk shift baru.', 400);
       }
 
@@ -47,6 +64,7 @@ export class OperasionalController {
         buka_toko_id,
         kota_id,
         tgl,
+        karyawan_baru,
         karyawan_baru_ids,
       });
 

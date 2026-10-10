@@ -5,7 +5,7 @@ import {
   KebutuhanListItemDto,
   StatusOperasionalDto,
 } from '../types/operasional.types';
-import { getZonaWaktu } from '../utils/fileHelper';
+import { getZonaWaktu, saveBase64Image } from '../utils/fileHelper';
 
 export class OperasionalService {
   /**
@@ -60,6 +60,7 @@ export class OperasionalService {
       karyawan_id: j.karyawan_id,
       nama: j.karyawan?.nama || 'Petugas',
       ganti: j.ganti,
+      foto: j.foto ? (j.foto.startsWith('http') || j.foto.startsWith('/') ? j.foto : `/img_kry/${j.foto}`) : null,
     }));
 
     return {
@@ -84,9 +85,29 @@ export class OperasionalService {
    * 3. Sinkronkan nama karyawan aktif ke buka_toko.nm_karyawan
    */
   async gantiShift(cabangId: number, adminId: number, payload: GantiShiftRequestDto) {
-    const { karyawan_baru_ids } = payload;
+    const { karyawan_baru, karyawan_baru_ids } = payload;
 
-    if (!Array.isArray(karyawan_baru_ids) || karyawan_baru_ids.length === 0) {
+    // Normalisasi input karyawan baru (dukung format objek { karyawan_id, foto } maupun legacy array ID)
+    interface ShiftKaryawanItem {
+      karyawan_id: number;
+      foto?: string | null;
+    }
+
+    let inputItems: ShiftKaryawanItem[] = [];
+
+    if (Array.isArray(karyawan_baru) && karyawan_baru.length > 0) {
+      inputItems = karyawan_baru.map((k) => ({
+        karyawan_id: Number(k.karyawan_id),
+        foto: k.foto || null,
+      }));
+    } else if (Array.isArray(karyawan_baru_ids) && karyawan_baru_ids.length > 0) {
+      inputItems = karyawan_baru_ids.map((id) => ({
+        karyawan_id: Number(id),
+        foto: null,
+      }));
+    }
+
+    if (inputItems.length === 0) {
       const error: any = new Error('Pilih minimal satu karyawan untuk shift baru.');
       error.statusCode = 400;
       throw error;
@@ -133,7 +154,18 @@ export class OperasionalService {
     bukaTokoId = Number(activeBukaToko.id);
     const tglTransaksi = activeBukaToko.tgl || zonaTanggal;
 
-    const cleanKaryawanIds = Array.from(new Set(karyawan_baru_ids.map(Number))).filter(Boolean);
+    // Bersihkan duplikasi karyawan_id dengan mempertahankan entri terakhir (beserta fotonya)
+    const uniqueMap = new Map<number, string | null>();
+    for (const item of inputItems) {
+      if (item.karyawan_id > 0) {
+        uniqueMap.set(item.karyawan_id, item.foto || null);
+      }
+    }
+    const cleanKaryawanEntries = Array.from(uniqueMap.entries()).map(([kId, foto]) => ({
+      karyawan_id: kId,
+      foto,
+    }));
+    const cleanKaryawanIds = cleanKaryawanEntries.map((e) => e.karyawan_id);
 
     // Ambil master nama karyawan untuk field nm_karyawan
     const karyawans = await prisma.karyawan.findMany({
@@ -141,6 +173,9 @@ export class OperasionalService {
       select: { id: true, nama: true },
     });
     const nmKaryawanBaru = karyawans.map((k) => k.nama).join(', ') || 'Kasir';
+
+    // Karakter random untuk nama file foto selfie
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
 
     // Eksekusi atomik $transaction
     const result = await prisma.$transaction(
@@ -156,8 +191,24 @@ export class OperasionalService {
           },
         });
 
-        // 2. Looping array karyawan_baru_ids
-        for (const kId of cleanKaryawanIds) {
+        // 2. Looping karyawan shift baru & simpan foto selfie masing-masing
+        for (const item of cleanKaryawanEntries) {
+          const kId = item.karyawan_id;
+          let fotoFileName: string | null = null;
+
+          // Simpan foto selfie jika berformat base64 (data:image/...)
+          if (item.foto && typeof item.foto === 'string') {
+            if (item.foto.startsWith('data:')) {
+              const rand2 =
+                chars.charAt(Math.floor(Math.random() * chars.length)) +
+                chars.charAt(Math.floor(Math.random() * chars.length));
+              const generatedName = `new_kry_${bukaTokoId}_${kId}_${rand2}.jpg`;
+              fotoFileName = saveBase64Image(item.foto, 'img_kry', generatedName) || generatedName;
+            } else {
+              fotoFileName = item.foto;
+            }
+          }
+
           const existing = await tx.jagaOutlet.findFirst({
             where: {
               buka_toko_id: BigInt(bukaTokoId),
@@ -166,11 +217,12 @@ export class OperasionalService {
           });
 
           if (existing) {
-            // Jika SUDAH ADA: Update field ganti = 0 (aktifkan kembali)
+            // Jika SUDAH ADA: Update field ganti = 0 (aktifkan kembali) & perbarui foto jika ada
             await tx.jagaOutlet.update({
               where: { id: existing.id },
               data: {
                 ganti: 0,
+                ...(fotoFileName ? { foto: fotoFileName } : {}),
                 updated_at: zonaWaktu,
               },
             });
@@ -185,7 +237,7 @@ export class OperasionalService {
                 role: 3, // Role 3 = MS / Anggota
                 tgl: tglTransaksi,
                 ganti: 0,
-                foto: null,
+                foto: fotoFileName || null,
                 created_at: zonaWaktu,
                 updated_at: zonaWaktu,
               },
@@ -221,6 +273,11 @@ export class OperasionalService {
             id: Number(j.id),
             karyawan_id: j.karyawan_id,
             nama: j.karyawan?.nama || 'Petugas',
+            foto: j.foto
+              ? j.foto.startsWith('http') || j.foto.startsWith('/')
+                ? j.foto
+                : `/img_kry/${j.foto}`
+              : null,
           })),
         };
       },

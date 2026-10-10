@@ -1,9 +1,15 @@
+export interface KaryawanGantiShiftItemDto {
+  karyawan_id: number;
+  foto: string;
+}
+
 export interface GantiShiftRequestDto {
   buka_toko_id?: number | string;
   cabang_id?: number;
   kota_id?: number;
   tgl?: string;
-  karyawan_baru_ids: number[];
+  karyawan_baru?: KaryawanGantiShiftItemDto[];
+  karyawan_baru_ids?: number[];
 }
 
 export interface KebutuhanItemInputDto {
@@ -44,5 +50,6 @@ export interface StatusOperasionalDto {
     karyawan_id: number;
     nama: string;
     ganti: number;
+    foto?: string | null;
   }>;
 }
