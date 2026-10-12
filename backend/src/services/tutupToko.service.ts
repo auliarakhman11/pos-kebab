@@ -262,8 +262,10 @@ export class TutupTokoService {
     }
 
     // =========================================================================
-    // 3B. LAPORAN PENGELUARAN AKUN (Dari tabel pengeluaran_jurnal)
-    // where: tgl = tanggal_buka_toko AND akun_id NOT IN (3, 14, 15) AND cabang_id = id cabang buka toko
+    // =========================================================================
+    // 3B. LAPORAN PENGELUARAN AKUN (Dari tabel pengeluaran_jurnal & jurnal)
+    // 1. pengeluaran_jurnal: tgl = tanggal_buka_toko AND akun_id NOT IN (3, 14, 15) AND cabang_id = id cabang
+    // 2. jurnal: tgl = tanggal_buka_toko AND akun_id IN (3, 14, 15) AND buka_toko_id = 0 AND buku_id = 2 AND cabang_id = id cabang AND void = 0 AND ket = 'Pembelian Barang' (di-group per akun_id)
     // =========================================================================
     const cabangIdBukaToko = Number(bukaTokoRecord.cabang_id);
     const tglBukaToko = bukaTokoRecord.tgl;
@@ -279,9 +281,58 @@ export class TutupTokoService {
       orderBy: { id: 'asc' },
     });
 
-    const pjAkunIds = Array.from(new Set(rawPengeluaranJurnal.map((pj) => pj.akun_id))).filter(Boolean);
+    const rawJurnalPembelian = await prisma.jurnal.findMany({
+      where: {
+        cabang_id: cabangIdBukaToko,
+        tgl: tglBukaToko,
+        akun_id: {
+          in: [3, 14, 15],
+        },
+        buka_toko_id: BigInt(0),
+        buku_id: 2,
+        void: 0,
+        ket: 'Pembelian Barang',
+      },
+      orderBy: { id: 'asc' },
+    });
+
+    // Grouping jurnal pembelian per akun_id
+    const jurnalGroupMap = new Map<number, {
+      id: number;
+      kd_gabungan: string;
+      akun_id: number;
+      jumlah: number;
+      ket: string;
+      tgl: Date | string;
+    }>();
+
+    for (const j of rawJurnalPembelian) {
+      const aId = j.akun_id;
+      const debitVal = Number(j.debit) || 0;
+      if (!jurnalGroupMap.has(aId)) {
+        jurnalGroupMap.set(aId, {
+          id: j.id,
+          kd_gabungan: j.kd_gabungan || '',
+          akun_id: aId,
+          jumlah: debitVal,
+          ket: j.ket || 'Pembelian Barang',
+          tgl: j.tgl,
+        });
+      } else {
+        const existing = jurnalGroupMap.get(aId)!;
+        existing.jumlah += debitVal;
+      }
+    }
+
+    const allAkunIds = Array.from(
+      new Set([
+        ...rawPengeluaranJurnal.map((pj) => pj.akun_id),
+        ...Array.from(jurnalGroupMap.keys()),
+      ])
+    ).filter(Boolean);
+
     const masterAkunPengeluaran = await prisma.akunPengeluaran.findMany({
-      where: { id: { in: pjAkunIds } },
+      where: { id: { in: allAkunIds } },
       select: { id: true, nm_akun: true },
     });
     const akunNameMap = new Map(masterAkunPengeluaran.map((a) => [a.id, a.nm_akun]));
@@ -289,6 +340,7 @@ export class TutupTokoService {
     let totalPengeluaranAkun = 0;
     const pengeluaranAkunItems: LaporanPengeluaranAkunItemDto[] = [];
 
+    // 1. Tambahkan item pengeluaran akun dari pengeluaran_jurnal
     for (const pj of rawPengeluaranJurnal) {
       const jumlah = Number(pj.jumlah) || 0;
       totalPengeluaranAkun += jumlah;
@@ -303,6 +355,24 @@ export class TutupTokoService {
         jumlah: jumlah,
         tgl: pj.tgl instanceof Date ? pj.tgl.toISOString().split('T')[0] : String(pj.tgl),
         created_at: pj.created_at ? pj.created_at.toISOString() : undefined,
+      });
+    }
+
+    // 2. Tambahkan item pembelian barang dari jurnal (di-group per akun_id)
+    for (const [, jGroup] of jurnalGroupMap) {
+      const jumlah = jGroup.jumlah;
+      totalPengeluaranAkun += jumlah;
+      const nmAkun = akunNameMap.get(jGroup.akun_id) || `Akun #${jGroup.akun_id}`;
+
+      pengeluaranAkunItems.push({
+        id: jGroup.id,
+        kd_gabungan: jGroup.kd_gabungan,
+        akun_id: jGroup.akun_id,
+        nm_akun: nmAkun,
+        ket: jGroup.ket,
+        jumlah: jumlah,
+        tgl: jGroup.tgl instanceof Date ? jGroup.tgl.toISOString().split('T')[0] : String(jGroup.tgl),
+        created_at: undefined,
       });
     }
 

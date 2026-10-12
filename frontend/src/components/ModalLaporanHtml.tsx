@@ -141,14 +141,12 @@ export default function ModalLaporanHtml({ isOpen, onClose, data }: ModalLaporan
                       Rp. {data.laporan_kas_bersih.total_pengeluaran_kebutuhan.toLocaleString('id-ID')}
                     </td>
                   </tr>
-                  {data.laporan_pengeluaran_akun && (data.laporan_pengeluaran_akun.total_pengeluaran > 0 || data.laporan_pengeluaran_akun.items.length > 0) && (
-                    <tr>
-                      <td colSpan={3} className="border border-black p-1.5">Pengeluaran Akun</td>
-                      <td colSpan={2} className="border border-black p-1.5 text-right">
-                        Rp. {data.laporan_pengeluaran_akun.total_pengeluaran.toLocaleString('id-ID')}
-                      </td>
-                    </tr>
-                  )}
+                  <tr>
+                    <td colSpan={3} className="border border-black p-1.5">Pengeluaran Akun</td>
+                    <td colSpan={2} className="border border-black p-1.5 text-right">
+                      Rp. {(data.laporan_pengeluaran_akun?.total_pengeluaran || 0).toLocaleString('id-ID')}
+                    </td>
+                  </tr>
                   <tr className="font-bold">
                     <td colSpan={3} className="border border-black p-1.5">Total Pengeluaran</td>
                     <td colSpan={2} className="border border-black p-1.5 text-right">
