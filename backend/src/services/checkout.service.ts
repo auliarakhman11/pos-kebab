@@ -142,11 +142,12 @@ export class CheckoutService {
     // Ambil seluruh bahan_id unik yang ada di resep
     const uniqueBahanIds = Array.from(new Set(allRecipes.map((r) => r.bahan_id)));
 
-    // Hitung Harga Satuan Bahan (HPP) sesuai instruksi:
+    // Hitung Harga Satuan Bahan (HPP) sesuai instruksi dan referensi PHP:
     // 1. Ambil harga tertinggi dari tabel stok_gudang (where jenis_bahan: 1, jenis: 1, void: 0, qty > 0, tgl >= '2026-02-22')
     //    Rumus max: (COALESCE(harga, 0) + COALESCE(harga_hutang, 0)) / qty
-    // 2. Jika tidak ada di stok_gudang, ambil dari tabel harga_bahan where bahan_id & kota_id
-    // 3. Jika tetap kosong, fallback ke bahan.harga
+    //    Jika ditemukan, terapkan markup 10%: harga_bahan = dt_harga + (dt_harga * 10 / 100)
+    // 2. Jika tidak ada di stok_gudang, ambil dari tabel harga_bahan where bahan_id & kota_id (tanpa markup)
+    // 3. Jika tetap kosong, fallback ke master bahan.harga / harga_beli atau 0
     const hppBahanMap = new Map<number, number>();
 
     if (uniqueBahanIds.length > 0) {
@@ -197,13 +198,19 @@ export class CheckoutService {
           }
         }
 
+        let hargaBahan = 0;
         if (maxUnitPrice > 0) {
-          hppBahanMap.set(bId, maxUnitPrice);
+          // Sesuai kode PHP: jika ada di stok_gudang, ditambah markup 10%
+          hargaBahan = maxUnitPrice + (maxUnitPrice * 0.10);
         } else if (hargaBahanMap.has(bId) && (hargaBahanMap.get(bId) || 0) > 0) {
-          hppBahanMap.set(bId, hargaBahanMap.get(bId)!);
+          // Sesuai kode PHP: jika tidak di stok_gudang, ambil dari harga_bahan (kota_id) tanpa markup
+          hargaBahan = hargaBahanMap.get(bId)!;
         } else {
-          hppBahanMap.set(bId, masterBahanMap.get(bId) || 0);
+          // Fallback ke master tabel bahan jika ada
+          hargaBahan = masterBahanMap.get(bId) || 0;
         }
+
+        hppBahanMap.set(bId, hargaBahan);
       }
     }
 
@@ -303,8 +310,15 @@ export class CheckoutService {
           for (const rec of productRecipes) {
             const takaran = Number(rec.takaran) || 0;
             if (takaran > 0) {
-              const hppBahan = hppBahanMap.get(rec.bahan_id) || 0;
-              const qtyKredit = Math.round(takaran * qty);
+              const hargaBahan = hppBahanMap.get(rec.bahan_id) || 0;
+              const totalPemakaian = takaran * qty;
+              const qtyKredit = Math.round(totalPemakaian);
+
+              // Sesuai kode PHP:
+              // 'kredit' => $d->takaran * $c->qty,
+              // 'harga'  => ($d->takaran * $c->qty) * ceil($harga_bahan),
+              // Field 'harga' pada tabel stok mencatat total nilai rupiah pemakaian bahan
+              const totalHargaStok = Math.round(totalPemakaian * Math.ceil(hargaBahan));
 
               await tx.stok.create({
                 data: {
@@ -318,7 +332,7 @@ export class CheckoutService {
                   bahan_id: rec.bahan_id,
                   debit: 0,
                   kredit: qtyKredit,
-                  harga: Math.round(hppBahan),
+                  harga: totalHargaStok,
                   tgl: tglTransaksi,
                   admin: adminId,
                   jenis: 'Keluar',
